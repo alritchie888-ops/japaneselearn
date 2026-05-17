@@ -263,6 +263,11 @@
   .sc-chip.on b{color:#fff;}
   .sc-note{font-size:10.5px; color:var(--ink-soft); margin-top:16px; line-height:1.55;
     max-width:248px;}
+  .mora-row{display:flex; gap:11px; justify-content:center; flex-wrap:wrap; margin-bottom:10px;}
+  .mora{display:flex; flex-direction:column; align-items:center;}
+  .mora .k{font-family:var(--f-jp); font-size:44px; line-height:1;}
+  .mora .r{font-family:var(--f-display); font-style:italic; font-size:14px;
+    color:var(--shu); margin-top:5px;}
   .audio-btn{margin-top:18px; display:inline-flex; align-items:center; gap:8px;
     background:var(--ink); color:var(--paper); border:none; border-radius:22px;
     padding:10px 18px; font-family:var(--f-ui); font-weight:600; font-size:12.5px; cursor:pointer;}
@@ -276,6 +281,8 @@
     color:var(--ink-faint);}
   .predict-q{font-family:var(--f-display); font-size:16px; margin:14px 0 12px;}
   .reveal-box{min-height:30px;}
+  .reveal-word{font-size:22px; color:var(--ink); line-height:1.3;}
+  .reveal-en{font-size:14px; color:var(--shu); font-weight:600; margin-top:2px;}
   .video-panel{width:230px; height:138px; border-radius:13px; position:relative;
     background:linear-gradient(135deg,#2a261d,#403a2c); display:flex; align-items:center;
     justify-content:center; overflow:hidden; margin-bottom:8px;}
@@ -287,6 +294,34 @@
   .video-cap{font-size:10.5px; color:var(--ink-faint); margin-top:2px;}
   .ctx-phrase{font-family:var(--f-jp); font-size:24px; line-height:1.5; margin-bottom:6px;}
   .ctx-phrase b{color:var(--shu);}
+  .ctx-roma{font-family:var(--f-display); font-style:italic; font-size:16px;
+    color:var(--shu); margin-bottom:8px; line-height:1.4;}
+  .ctx-roma b{font-weight:700;}
+  .shadow-roma{font-family:var(--f-display); font-style:italic; font-size:12.5px;
+    color:var(--shu); margin-top:3px; line-height:1.4;}
+  .shadow-roma b{font-weight:700;}
+  .use-block{width:250px; border:1px solid var(--line); border-radius:14px; overflow:hidden;}
+  .use-video{height:140px; position:relative; display:flex; align-items:center;
+    justify-content:center; background:linear-gradient(135deg,#2a261d,#403a2c);}
+  .use-video::after{content:""; position:absolute; inset:0;
+    background:repeating-linear-gradient(115deg,transparent 0 18px,rgba(255,255,255,.025) 18px 36px);}
+  .use-tag{position:absolute; bottom:8px; left:0; right:0; text-align:center; font-size:9px;
+    font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.45);}
+  .shadow-card{background:var(--card-2); border-top:1px solid var(--line);
+    padding:13px 14px 15px; text-align:center;}
+  .shadow-lbl{font-size:9.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--shu); margin-bottom:9px;}
+  .shadow-phrase{font-family:var(--f-jp); font-size:19px; line-height:1.4;}
+  .shadow-phrase b{color:var(--shu);}
+  .shadow-en{font-size:10.5px; color:var(--ink-soft); font-style:italic; margin:3px 0 11px;}
+  .shadow-actions{display:flex; gap:7px; justify-content:center; align-items:center;}
+  .shadow-actions .btn-ghost{padding:7px 11px; font-size:11px;}
+  .shadow-actions .audio-btn{margin-top:0; padding:8px 13px; font-size:11.5px;}
+  .shadow-result{margin-top:11px;}
+  .sr-score{font-family:var(--f-display); font-size:30px; font-weight:600; line-height:1;}
+  .sr-verdict{font-size:11px; font-weight:700; margin-top:2px; letter-spacing:.02em;}
+  .sr-heard{font-size:10.5px; color:var(--ink-soft); margin-top:7px; line-height:1.5;}
+  .sr-warn{font-size:10.5px; color:var(--shu-deep); line-height:1.5; display:block;}
   .intro-foot{padding:14px 20px 18px; border-top:1px solid var(--line-soft);}
 
   /* drill */
@@ -660,6 +695,18 @@
               </div>
             </div>
 
+            <!-- M familiarity check -->
+            <div class="screen" id="m-check">
+              <div class="m-top" style="padding:30px 20px 0;">
+                <span class="back" onclick="showMobile('detail')">← Cancel</span>
+                <div class="eyebrow shu" style="margin-top:8px;">Familiarity check · earn it</div>
+                <div style="font-size:11.5px;color:var(--ink-soft);margin-top:5px;line-height:1.5;">
+                  Introduce builds exposure — this confirms it. Pass both questions
+                  and the word becomes <i>familiar</i>.</div>
+              </div>
+              <div class="drill-stage" id="checkStage"></div>
+            </div>
+
             <!-- M drill -->
             <div class="screen" id="m-drill">
               <div class="drill-bar">
@@ -759,17 +806,29 @@ const ART = {
 };
 const WORDS = [
   {id:'sushi',   kana:'すし',     romaji:'sushi',     en:'sushi',          pos:'noun',         band:1,
-    phrase:['','すし','をください'], phraseEn:'Sushi, please.'},
+    mora:[['す','su'],['し','shi']],
+    phrase:['','すし','をください'], phraseEn:'Sushi, please.',
+    phraseRomaji:'sushi o kudasai', phraseKanji:'寿司をください'},
   {id:'ocha',    kana:'おちゃ',   romaji:'ocha',      en:'tea',            pos:'noun',         band:1,
-    phrase:['','おちゃ','をおねがいします'], phraseEn:'Tea, please.'},
+    mora:[['お','o'],['ちゃ','cha']],
+    phrase:['','おちゃ','をおねがいします'], phraseEn:'Tea, please.',
+    phraseRomaji:'ocha o onegai shimasu', phraseKanji:'お茶をお願いします'},
   {id:'oishii',  kana:'おいしい', romaji:'oishii',    en:'delicious',      pos:'adjective',    band:1,
-    phrase:['とても ','おいしい','です'], phraseEn:'It is very delicious.'},
+    mora:[['お','o'],['い','i'],['し','shi'],['い','i']],
+    phrase:['とても ','おいしい','です'], phraseEn:'It is very delicious.',
+    phraseRomaji:'totemo oishii desu', phraseKanji:'とても美味しいです'},
   {id:'sumimasen',kana:'すみません',romaji:'sumimasen',en:'excuse me',     pos:'phrase',       band:2,
-    phrase:['','すみません','、メニューを'], phraseEn:'Excuse me — the menu?'},
+    mora:[['す','su'],['み','mi'],['ま','ma'],['せ','se'],['ん','n']],
+    phrase:['','すみません','、メニューをください'], phraseEn:'Excuse me, the menu please.',
+    phraseRomaji:'sumimasen, menyū o kudasai', phraseKanji:'すみませんメニューをください'},
   {id:'osusume', kana:'おすすめ', romaji:'osusume',   en:'recommendation', pos:'noun',         band:2,
-    phrase:['','おすすめ','はなんですか'], phraseEn:'What do you recommend?'},
+    mora:[['お','o'],['す','su'],['す','su'],['め','me']],
+    phrase:['','おすすめ','はなんですか'], phraseEn:'What do you recommend?',
+    phraseRomaji:'osusume wa nan desu ka', phraseKanji:'お勧めは何ですか'},
   {id:'chuumon', kana:'ちゅうもん',romaji:'chūmon',    en:'an order',       pos:'noun / verb',  band:3,
-    phrase:['これを ','ちゅうもん','します'], phraseEn:"I'll order this."}
+    mora:[['ちゅ','chu'],['う','u'],['も','mo'],['ん','n']],
+    phrase:['これを ','ちゅうもん','します'], phraseEn:"I'll order this.",
+    phraseRomaji:'kore o chūmon shimasu', phraseKanji:'これを注文します'}
 ];
 const byId = id => WORDS.find(w=>w.id===id);
 const BANDS = {1:'Simple',2:'Building',3:'Complex'};
@@ -894,33 +953,42 @@ function renderIntro(){
   const stage=document.getElementById('introStage');
   let html='<div class="intro-step-name">'+STEPS[s]+'</div>';
 
+  if(s===1||s===2||s===4){
+    let chips='';
+    [['a','romaji'],['b','romaji + kana'],['c','kana only']].forEach(p=>{
+      chips+='<button class="sc-chip'+(state.scaffold===p[0]?' on':'')+'" '+
+        'onclick="setScaffold(\''+p[0]+'\')">'+p[1]+'</button>';
+    });
+    html+='<div class="sc-row">'+chips+'</div>';
+  }
+
   if(s===0){
     const sc=state.scaffold;
     let chips='';
     [['a','romaji'],['b','romaji + kana'],['c','kana only']].forEach(p=>{
       chips+='<button class="sc-chip'+(sc===p[0]?' on':'')+'" '+
-        'onclick="setScaffold(\''+p[0]+'\')"><b>'+p[0]+'</b> '+p[1]+'</button>';
+        'onclick="setScaffold(\''+p[0]+'\')">'+p[1]+'</button>';
     });
+    const moraRow='<div class="mora-row">'+w.mora.map(m=>
+      '<div class="mora"><span class="k jp">'+m[0]+'</span>'+
+      '<span class="r">'+m[1]+'</span></div>').join('')+'</div>';
     let wb;
     if(sc==='a'){
       wb='<div class="intro-kana" style="font-family:var(--f-display);font-style:italic;">'+
            w.romaji+'</div><div class="intro-en">'+w.en+'</div>';
     } else if(sc==='b'){
-      wb='<div class="intro-kana jp" style="font-size:46px;">'+w.kana+'</div>'+
-         '<div style="font-family:var(--f-display);font-style:italic;color:var(--shu);'+
-           'font-size:16px;margin-top:2px;">'+w.romaji+'</div>'+
-         '<div class="intro-en" style="margin-top:5px;">'+w.en+'</div>';
+      wb=moraRow+'<div class="intro-en">'+w.en+'</div>';
     } else {
       wb='<div class="intro-kana jp">'+w.kana+'</div><div class="intro-en">'+w.en+'</div>';
     }
     const notes={
       a:'Zero knowledge — romaji only, so the word is pronounceable before kana is learned.',
-      b:'Bridging — romaji sits beside the kana so the shapes attach to sounds you know.',
+      b:'Bridging — each kana sits directly above its sound, so the character attaches to the romaji.',
       c:'Scaffold removed — kana alone. This is where a reader of kana starts.'};
     html+='<div class="sc-row">'+chips+'</div>'+wb+
       '<button class="audio-btn" onclick="speak(\''+w.kana+'\',this)">▶ &nbsp;hear it first</button>'+
       '<div class="sc-note">'+notes[sc]+'<br><span style="color:var(--ink-faint);">'+
-      'Stage is normally set by kana mastery in the Structure track — a &amp; b skip once you can read kana.</span></div>';
+      'Stage is normally set by kana mastery in the Structure track — the romaji stages drop away once you can read kana.</span></div>';
     introNextBtn.textContent='Next →';
   }
   else if(s===1){
@@ -932,168 +1000,6 @@ function renderIntro(){
     introNextBtn.textContent='Next →';
   }
   else if(s===2){
-    const ph=w.phrase;
-    html+='<div class="ctx-phrase jp">'+ph[0]+'<b>'+ph[1]+'</b>'+ph[2]+'</div>'+
-      '<div class="intro-en">'+w.phraseEn+'</div>'+
-      '<button class="audio-btn" onclick="speak(\''+ph.join('')+'\',this)">▶ &nbsp;hear the phrase</button>'+
-      '<div style="font-size:10.5px;color:var(--ink-faint);margin-top:14px;">the word has neighbours</div>';
-    introNextBtn.textContent='Next →';
-  }
-  else if(s===3){
-    html+='<div class="video-panel"><div class="play-tri"></div></div>'+
-      '<div class="placeholder-tag">video placeholder · 4–8 s clip</div>'+
-      '<div class="video-cap">the word as a situated event</div>';
-    introNextBtn.textContent='Next →';
-  }
-  else if(s===4){
-    html+='<div class="video-panel"><div class="play-tri"></div></div>'+
-      '<div class="placeholder-tag">video placeholder · word in use</div>'+
-      '<div class="video-cap" style="margin-bottom:10px;">a person using it — your shadowing cue</div>'+
-      '<button class="audio-btn" style="background:var(--shu);" '+
-        'onclick="this.textContent=\'✓ compared to reference\';">🎤 &nbsp;your turn — speak it</button>';
-    introNextBtn.textContent='Finish — mark familiar ✓';
-  }
-  stage.innerHTML=html;
-}
-function revealMeaning(){
-  const w=byId(state.introWord);
-  document.getElementById('revealBox').innerHTML=
-    '<div class="intro-en" style="font-style:normal;color:var(--ink);font-size:20px;">'+
-    w.kana+' &nbsp;·&nbsp; <span style="color:var(--shu);">'+w.en+'</span></div>';
-}
-function setScaffold(stage){ state.scaffold=stage; renderIntro(); }
-function introNext(){
-  if(state.introStep<4){ state.introStep++; renderIntro(); }
-  else {
-    STATUS[state.introWord]='familiar';
-    toast('“'+byId(state.introWord).en+'” is now familiar — ready to drill');
-    showMobile('detail');
-  }
-}
-
-/* ---------- DRILL loop ---------- */
-function startDrill(){
-  const ready=WORDS.filter(w=>STATUS[w.id]==='familiar').map(w=>w.id);
-  if(ready.length===0){ toast('No familiar words yet — introduce one first'); return; }
-  state.drill={queue:[...ready], correct:{}, lockedThisRun:0};
-  showMobile('drill'); renderDrillCard();
-}
-function renderDrillCard(){
-  const d=state.drill, stage=document.getElementById('drillStage');
-  drillCount.textContent='queue '+d.queue.length+' · locked '+d.lockedThisRun;
-  if(d.queue.length===0){
-    stage.innerHTML='<div class="drill-card" style="padding:40px 20px;">'+
-      '<div style="font-family:var(--f-jp);font-size:40px;color:var(--shu);">完</div>'+
-      '<div class="h-disp" style="font-size:20px;margin-top:8px;">Session complete</div>'+
-      '<div style="font-size:12.5px;color:var(--ink-soft);margin-top:6px;">'+
-      d.lockedThisRun+' word'+(d.lockedThisRun===1?'':'s')+' locked into the spaced queue.</div></div>'+
-      '<button class="btn btn-primary" style="width:100%;" onclick="showMobile(\'proficiency\')">'+
-      'See proficiency →</button>'+
-      '<button class="btn btn-ghost" style="width:100%;margin-top:8px;" '+
-      'onclick="showMobile(\'detail\')">Back to topic</button>';
-    return;
-  }
-  const id=d.queue[0], w=byId(id);
-  const dir = Math.random()<0.5?'jp2en':'en2jp';
-  d.dir=dir; d.cur=id;
-  const others=WORDS.filter(x=>x.id!==id).sort(()=>Math.random()-.5).slice(0,3);
-  const opts=[w,...others].sort(()=>Math.random()-.5);
-
-  let html='<div class="drill-card">';
-  if(dir==='jp2en'){
-    html+='<div class="drill-dir">日本語 → English</div>'+
-      '<div class="drill-prompt jp">'+w.kana+'</div></div>';
-    html+='<div class="drill-opts">';
-    opts.forEach(o=>html+='<button class="opt" onclick="drillAnswer(this,'+(o.id===id)+')">'+o.en+'</button>');
-  } else {
-    html+='<div class="drill-dir">English → 日本語</div>'+
-      '<div class="drill-prompt en">'+w.en+'</div></div>';
-    html+='<div class="drill-opts">';
-    opts.forEach(o=>html+='<button class="opt" onclick="drillAnswer(this,'+(o.id===id)+')">'+
-      '<span class="jp">'+o.kana+'</span></button>');
-  }
-  html+='</div>';
-  stage.innerHTML=html;
-}
-function drillAnswer(btn,correct){
-  const d=state.drill, id=d.cur;
-  document.querySelectorAll('#drillStage .opt').forEach(o=>{
-    o.setAttribute('onclick',''); o.classList.add('dim');
-  });
-  btn.classList.remove('dim');
-  btn.classList.add(correct?'correct':'wrong');
-
-  if(correct){
-    d.correct[id]=(d.correct[id]||0)+1;
-    d.queue.shift();
-    if(d.correct[id]>=2){
-      STATUS[id]='locked'; d.lockedThisRun++;
-      fireStamp(byId(id).kana[0]);
-      setTimeout(()=>{renderDrillCard();},1600);
-      return;
-    } else {
-      d.queue.push(id);              // needs one more correct
-    }
-  } else {
-    document.querySelectorAll('#drillStage .opt').forEach(o=>{ /* show nothing extra */ });
-    d.queue.push(d.queue.shift());   // missed — back of the queue
-  }
-  setTimeout(()=>{renderDrillCard();},correct?620:780);
-}
-function fireStamp(ch){
-  const v=document.querySelector('#mobileDevice .viewport');
-  const s=document.createElement('div');
-  s.className='stamp';
-  s.innerHTML='<div class="seal jp">'+ch+'</div>';
-  v.appendChild(s);
-  requestAnimationFrame(()=>s.classList.add('fire'));
-  toast('locked — into the spaced-repetition queue');
-  setTimeout(()=>s.remove(),1700);
-}
-
-/* ---------- structure mini-drill ---------- */
-function structDrill(){
-  const host=document.getElementById('structBody');
-  if(state.structDone){ host.scrollTop=0; }
-  host.innerHTML=
-    '<span class="back" onclick="showMobile(\'structure\')">← Structure</span>'+
-    '<div class="eyebrow shu" style="margin:10px 0 0;">Hiragana · recognition</div>'+
-    '<div class="drill-card" style="margin-top:12px;">'+
-      '<div class="drill-dir">which sound?</div>'+
-      '<div class="drill-prompt jp">か</div></div>'+
-    '<div class="drill-opts" id="structOpts">'+
-      ['ka','sa','ta','na'].sort(()=>Math.random()-.5).map(o=>
-        '<button class="opt" onclick="structAns(this,'+(o==='ka')+')">'+o+'</button>').join('')+
-    '</div>'+
-    '<div class="parallel-note" style="margin-top:14px;">Same drill loop as the topic track — '+
-    'just a different compartment.</div>';
-}
-function structAns(btn,ok){
-  document.querySelectorAll('#structOpts .opt').forEach(o=>{o.setAttribute('onclick','');o.classList.add('dim');});
-  btn.classList.remove('dim'); btn.classList.add(ok?'correct':'wrong');
-  if(ok){ state.structDone=true; toast('か = ka · structure builds in parallel'); }
-}
-
-/* ---------- helpers ---------- */
-let toastT;
-function toast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
-  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2400);
-}
-function speak(text,btn){
-  try{
-    speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(text);
-    u.lang='ja-JP'; u.rate=.85;
-    if(btn){ btn.classList.add('playing');
-      u.onend=()=>btn.classList.remove('playing'); }
-    speechSynthesis.speak(u);
-  }catch(e){}
-}
-
-/* init */
-renderDetail();
-</script>
-</body>
-</html>
+    const ph=w.phrase, sc=state.scaffold;
+    const kanaP='<div class="ctx-phrase jp">'+ph[0]+'<b>'+ph[1]+'</b>'+ph[2]+'</div>';
+    const rom
