@@ -1002,4 +1002,323 @@ function renderIntro(){
   else if(s===2){
     const ph=w.phrase, sc=state.scaffold;
     const kanaP='<div class="ctx-phrase jp">'+ph[0]+'<b>'+ph[1]+'</b>'+ph[2]+'</div>';
-    const rom
+    const romaP='<div class="ctx-roma">'+
+      w.phraseRomaji.replace(w.romaji,'<b>'+w.romaji+'</b>')+'</div>';
+    const phraseBlock = sc==='a' ? romaP : sc==='b' ? (kanaP+romaP) : kanaP;
+    html+=phraseBlock+
+      '<div class="intro-en">'+w.phraseEn+'</div>'+
+      '<button class="audio-btn" onclick="speak(\''+ph.join('')+'\',this)">▶ &nbsp;hear the phrase</button>'+
+      '<div style="font-size:10.5px;color:var(--ink-faint);margin-top:14px;">the word has neighbours</div>';
+    introNextBtn.textContent='Next →';
+  }
+  else if(s===3){
+    html+='<div class="video-panel"><div class="play-tri"></div></div>'+
+      '<div class="placeholder-tag">video placeholder · 4–8 s clip</div>'+
+      '<div class="video-cap">the word as a situated event</div>';
+    introNextBtn.textContent='Next →';
+  }
+  else if(s===4){
+    const ph=w.phrase, sc=state.scaffold;
+    const shKana='<div class="shadow-phrase jp">'+ph[0]+'<b>'+ph[1]+'</b>'+ph[2]+'</div>';
+    const shRoma='<div class="shadow-roma">'+
+      w.phraseRomaji.replace(w.romaji,'<b>'+w.romaji+'</b>')+'</div>';
+    const shPhrase = sc==='a' ? shRoma : sc==='b' ? (shKana+shRoma) : shKana;
+    html+='<div class="use-block">'+
+        '<div class="use-video"><div class="play-tri"></div>'+
+          '<span class="use-tag">video · word in use</span></div>'+
+        '<div class="shadow-card">'+
+          '<div class="shadow-lbl">Your turn — say what they said</div>'+
+          shPhrase+
+          '<div class="shadow-en">'+w.phraseEn+'</div>'+
+          '<div class="shadow-actions">'+
+            '<button class="btn btn-ghost" onclick="speak(\''+ph.join('')+'\',this)">▶ hear it</button>'+
+            '<button class="audio-btn" onclick="speakCheck(this)">🎤 speak it</button>'+
+          '</div>'+
+          '<div class="shadow-result"></div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="placeholder-tag" style="margin-top:10px;">placeholder video · '+
+        'speech is scored live (Chrome / Edge)</div>';
+    introNextBtn.textContent='Check what you\'ve learned →';
+  }
+  stage.innerHTML=html;
+}
+function revealMeaning(){
+  const w=byId(state.introWord), sc=state.scaffold;
+  let wb;
+  if(sc==='a'){
+    wb='<div class="reveal-word" style="font-family:var(--f-display);font-style:italic;">'+
+       w.romaji+'</div>';
+  } else if(sc==='b'){
+    wb='<div class="mora-row">'+w.mora.map(m=>
+       '<div class="mora"><span class="k jp">'+m[0]+'</span>'+
+       '<span class="r">'+m[1]+'</span></div>').join('')+'</div>';
+  } else {
+    wb='<div class="reveal-word jp">'+w.kana+'</div>';
+  }
+  document.getElementById('revealBox').innerHTML=wb+
+    '<div class="reveal-en">'+w.en+'</div>';
+}
+function setScaffold(stage){ state.scaffold=stage; renderIntro(); }
+function introNext(){
+  if(state.introStep<4){ state.introStep++; renderIntro(); }
+  else { startCheck(); }
+}
+
+/* ---------- FAMILIARITY check — 'familiar' is earned by a test, not self-granted ---------- */
+function startCheck(){
+  state.check={wordId:state.introWord, q:0};
+  showMobile('check'); renderCheck();
+}
+function renderCheck(){
+  const c=state.check, w=byId(c.wordId);
+  const host=document.getElementById('checkStage');
+  if(c.q>=2){
+    STATUS[c.wordId]='familiar';
+    host.innerHTML='<div class="drill-card" style="padding:36px 20px;">'+
+      '<div style="font-family:var(--f-jp);font-size:38px;color:var(--good);">✓</div>'+
+      '<div class="h-disp" style="font-size:19px;margin-top:8px;">Familiar</div>'+
+      '<div style="font-size:12px;color:var(--ink-soft);margin-top:6px;">“'+w.en+
+      '” passed the check — it can now enter the drill loop.</div></div>'+
+      '<button class="btn btn-primary" style="width:100%;" '+
+      'onclick="showMobile(\'detail\')">Back to topic →</button>';
+    return;
+  }
+  const dir=c.q===0?'jp2en':'en2jp';
+  const others=WORDS.filter(x=>x.id!==w.id).sort(()=>Math.random()-.5).slice(0,3);
+  const opts=[w,...others].sort(()=>Math.random()-.5);
+  let h='<div style="font-size:11px;color:var(--ink-soft);text-align:center;'+
+        'margin-bottom:10px;font-weight:600;">Question '+(c.q+1)+' of 2</div>'+
+        '<div class="drill-card">';
+  if(dir==='jp2en'){
+    h+='<div class="drill-dir">日本語 → English · which meaning?</div>'+
+       '<div class="drill-prompt jp">'+w.kana+'</div></div><div class="drill-opts">';
+    opts.forEach(o=>h+='<button class="opt" onclick="checkAnswer(this,'+(o.id===w.id)+')">'+o.en+'</button>');
+  } else {
+    h+='<div class="drill-dir">English → 日本語 · which word?</div>'+
+       '<div class="drill-prompt en">'+w.en+'</div></div><div class="drill-opts">';
+    opts.forEach(o=>h+='<button class="opt" onclick="checkAnswer(this,'+(o.id===w.id)+')">'+
+      '<span class="jp">'+o.kana+'</span></button>');
+  }
+  host.innerHTML=h+'</div>';
+}
+function checkAnswer(btn,correct){
+  const w=byId(state.check.wordId);
+  document.querySelectorAll('#checkStage .opt').forEach(o=>{
+    o.setAttribute('onclick',''); o.classList.add('dim');
+  });
+  btn.classList.remove('dim'); btn.classList.add(correct?'correct':'wrong');
+  if(correct){
+    state.check.q++;
+    setTimeout(renderCheck,640);
+  } else {
+    document.querySelectorAll('#checkStage .opt').forEach(o=>{
+      const t=o.textContent.trim();
+      if(t===w.en||t===w.kana){ o.classList.remove('dim'); o.classList.add('correct'); }
+    });
+    toast('Not yet — that one needs another look');
+    setTimeout(renderCheck,1300);
+  }
+}
+
+/* ---------- DRILL loop ---------- */
+function startDrill(){
+  const ready=WORDS.filter(w=>STATUS[w.id]==='familiar').map(w=>w.id);
+  if(ready.length===0){ toast('No familiar words yet — introduce one first'); return; }
+  state.drill={queue:[...ready], correct:{}, lockedThisRun:0};
+  showMobile('drill'); renderDrillCard();
+}
+function renderDrillCard(){
+  const d=state.drill, stage=document.getElementById('drillStage');
+  drillCount.textContent='queue '+d.queue.length+' · locked '+d.lockedThisRun;
+  if(d.queue.length===0){
+    stage.innerHTML='<div class="drill-card" style="padding:40px 20px;">'+
+      '<div style="font-family:var(--f-jp);font-size:40px;color:var(--shu);">完</div>'+
+      '<div class="h-disp" style="font-size:20px;margin-top:8px;">Session complete</div>'+
+      '<div style="font-size:12.5px;color:var(--ink-soft);margin-top:6px;">'+
+      d.lockedThisRun+' word'+(d.lockedThisRun===1?'':'s')+' locked into the spaced queue.</div></div>'+
+      '<button class="btn btn-primary" style="width:100%;" onclick="showMobile(\'proficiency\')">'+
+      'See proficiency →</button>'+
+      '<button class="btn btn-ghost" style="width:100%;margin-top:8px;" '+
+      'onclick="showMobile(\'detail\')">Back to topic</button>';
+    return;
+  }
+  const id=d.queue[0], w=byId(id);
+  const dir = Math.random()<0.5?'jp2en':'en2jp';
+  d.dir=dir; d.cur=id;
+  const others=WORDS.filter(x=>x.id!==id).sort(()=>Math.random()-.5).slice(0,3);
+  const opts=[w,...others].sort(()=>Math.random()-.5);
+
+  let html='<div class="drill-card">';
+  if(dir==='jp2en'){
+    html+='<div class="drill-dir">日本語 → English</div>'+
+      '<div class="drill-prompt jp">'+w.kana+'</div></div>';
+    html+='<div class="drill-opts">';
+    opts.forEach(o=>html+='<button class="opt" onclick="drillAnswer(this,'+(o.id===id)+')">'+o.en+'</button>');
+  } else {
+    html+='<div class="drill-dir">English → 日本語</div>'+
+      '<div class="drill-prompt en">'+w.en+'</div></div>';
+    html+='<div class="drill-opts">';
+    opts.forEach(o=>html+='<button class="opt" onclick="drillAnswer(this,'+(o.id===id)+')">'+
+      '<span class="jp">'+o.kana+'</span></button>');
+  }
+  html+='</div>';
+  stage.innerHTML=html;
+}
+function drillAnswer(btn,correct){
+  const d=state.drill, id=d.cur;
+  document.querySelectorAll('#drillStage .opt').forEach(o=>{
+    o.setAttribute('onclick',''); o.classList.add('dim');
+  });
+  btn.classList.remove('dim');
+  btn.classList.add(correct?'correct':'wrong');
+
+  if(correct){
+    d.correct[id]=(d.correct[id]||0)+1;
+    d.queue.shift();
+    if(d.correct[id]>=2){
+      STATUS[id]='locked'; d.lockedThisRun++;
+      fireStamp(byId(id).kana[0]);
+      setTimeout(()=>{renderDrillCard();},1600);
+      return;
+    } else {
+      d.queue.push(id);              // needs one more correct
+    }
+  } else {
+    document.querySelectorAll('#drillStage .opt').forEach(o=>{ /* show nothing extra */ });
+    d.queue.push(d.queue.shift());   // missed — back of the queue
+  }
+  setTimeout(()=>{renderDrillCard();},correct?620:780);
+}
+function fireStamp(ch){
+  const v=document.querySelector('#mobileDevice .viewport');
+  const s=document.createElement('div');
+  s.className='stamp';
+  s.innerHTML='<div class="seal jp">'+ch+'</div>';
+  v.appendChild(s);
+  requestAnimationFrame(()=>s.classList.add('fire'));
+  toast('locked — into the spaced-repetition queue');
+  setTimeout(()=>s.remove(),1700);
+}
+
+/* ---------- structure mini-drill ---------- */
+function structDrill(){
+  const host=document.getElementById('structBody');
+  if(state.structDone){ host.scrollTop=0; }
+  host.innerHTML=
+    '<span class="back" onclick="showMobile(\'structure\')">← Structure</span>'+
+    '<div class="eyebrow shu" style="margin:10px 0 0;">Hiragana · recognition</div>'+
+    '<div class="drill-card" style="margin-top:12px;">'+
+      '<div class="drill-dir">which sound?</div>'+
+      '<div class="drill-prompt jp">か</div></div>'+
+    '<div class="drill-opts" id="structOpts">'+
+      ['ka','sa','ta','na'].sort(()=>Math.random()-.5).map(o=>
+        '<button class="opt" onclick="structAns(this,'+(o==='ka')+')">'+o+'</button>').join('')+
+    '</div>'+
+    '<div class="parallel-note" style="margin-top:14px;">Same drill loop as the topic track — '+
+    'just a different compartment.</div>';
+}
+function structAns(btn,ok){
+  document.querySelectorAll('#structOpts .opt').forEach(o=>{o.setAttribute('onclick','');o.classList.add('dim');});
+  btn.classList.remove('dim'); btn.classList.add(ok?'correct':'wrong');
+  if(ok){ state.structDone=true; toast('か = ka · structure builds in parallel'); }
+}
+
+/* ---------- helpers ---------- */
+let toastT;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2400);
+}
+function speak(text,btn){
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='ja-JP'; u.rate=.85;
+    if(btn){ btn.classList.add('playing');
+      u.onend=()=>btn.classList.remove('playing'); }
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+function speakCheck(btn){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const card=btn.closest('.shadow-card');
+  const out=card.querySelector('.shadow-result');
+  if(!SR){
+    out.innerHTML='<span class="sr-warn">Speech scoring needs Chrome or Edge — '+
+      "this browser doesn't support the Web Speech API.</span>";
+    return;
+  }
+  const w=byId(state.introWord);
+  const targets=[w.phrase.join(''), w.phraseKanji||''];
+  const rec=new SR();
+  rec.lang='ja-JP'; rec.interimResults=false; rec.maxAlternatives=4;
+  btn.setAttribute('onclick',''); btn.textContent='● listening…';
+  btn.style.background='var(--ink-soft)';
+  out.innerHTML='<span class="sr-heard">listening — say the phrase now…</span>';
+  let got=false;
+  rec.onresult=(e)=>{
+    got=true;
+    const res=e.results[0]; let best=0, heard=res[0]?res[0].transcript:'';
+    for(let i=0;i<res.length;i++){
+      const t=res[i].transcript;
+      const sc=Math.max.apply(null,targets.map(tg=>similarity(norm(t),norm(tg))));
+      if(sc>best){ best=sc; heard=t; }
+    }
+    showScore(out,btn,Math.round(best*100),heard);
+  };
+  rec.onerror=(e)=>{
+    got=true;
+    out.innerHTML='<span class="sr-warn">'+
+      ((e.error==='not-allowed'||e.error==='service-not-allowed')
+        ? 'Microphone blocked — allow mic access for this page, then retry.'
+        : e.error==='no-speech' ? "Didn't catch anything — tap and try again."
+        : 'Speech scoring could not run here ('+e.error+').')+'</span>';
+    resetSpeakBtn(btn);
+  };
+  rec.onend=()=>{ if(!got){
+    out.innerHTML='<span class="sr-warn">No speech detected — try again.</span>';
+    resetSpeakBtn(btn); } };
+  try{ rec.start(); }
+  catch(err){
+    out.innerHTML='<span class="sr-warn">Speech scoring is unavailable in this context — '+
+      'open the page directly in Chrome or Edge.</span>';
+    resetSpeakBtn(btn);
+  }
+}
+function resetSpeakBtn(btn){
+  btn.textContent='🎤 try again'; btn.style.background='';
+  btn.setAttribute('onclick','speakCheck(this)');
+}
+function showScore(out,btn,score,heard){
+  const v = score>=85 ? ['great match','var(--good)']
+          : score>=60 ? ['close — keep practising','var(--shu-deep)']
+          : ['not quite — try again','var(--shu)'];
+  out.innerHTML=
+    '<div class="sr-score" style="color:'+v[1]+';">'+score+'%</div>'+
+    '<div class="sr-verdict" style="color:'+v[1]+';">'+v[0]+'</div>'+
+    '<div class="sr-heard">we heard <span class="jp">「'+(heard||'—')+'」</span></div>';
+  resetSpeakBtn(btn);
+}
+function norm(s){ return (s||'').replace(/[\s、。，．,.!?！？・「」]/g,''); }
+function similarity(a,b){
+  if(!a||!b) return 0;
+  return 1 - lev(a,b)/Math.max(a.length,b.length);
+}
+function lev(a,b){
+  const m=a.length, n=b.length;
+  const dp=[]; for(let i=0;i<=m;i++) dp.push([i]);
+  for(let j=0;j<=n;j++) dp[0][j]=j;
+  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++){
+    dp[i][j]=Math.min(dp[i-1][j]+1, dp[i][j-1]+1,
+      dp[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  }
+  return dp[m][n];
+}
+
+/* init */
+renderDetail();
+</script>
+</body>
+</html>
