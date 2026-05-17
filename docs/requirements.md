@@ -1,6 +1,6 @@
 # Japanese Learning App — MVP Requirements Specification
 
-*Status: requirements phase complete. This document is the agreed reference. No build work has started.*
+*Status: requirements phase complete. This document is the agreed reference, refined as needed during Stage-1 prototyping.*
 
 ---
 
@@ -11,6 +11,8 @@ A Japanese-language learning application built around a single conviction: **voc
 The app teaches Japanese through **taxonomies** — concrete real-world topics the learner chooses (ordering sushi, learning to drive, negotiating a contract). For each topic, the system builds a complete domain vocabulary and the phrases that go with it, ordered from simple to complex, expanding as the learner gains mastery. The goal is *comprehensive comprehension within a topic* rather than scattered word knowledge.
 
 The taxonomy method is not a personal workaround. It generalizes: a context-first, topic-organized approach is a strong method for any learner on any subject. The app therefore has value beyond its first user.
+
+> Note on terminology: "taxonomy" is the internal/spec term for a topic unit; the learner-facing label is **"Topic."**
 
 ---
 
@@ -36,7 +38,7 @@ These govern every decision below. Where a later requirement and a principle con
 
 **3.2 Learning direction:** EN→JP is the primary, production-heavy direction. JP→EN is the secondary recognition direction. Testing is **bidirectional** — the learner may be prompted in either direction (matching the proven spreadsheet method: a character *or* an English word, in random order).
 
-**3.3 Platform:** Web application delivered as a **PWA** (Progressive Web App) — one codebase, runs in the browser, installable on phone and desktop, no app store. The fast text-based drill loop should remain available offline; media generation and first-introduction require a network connection.
+**3.3 Platform:** Web application delivered as a **PWA** (Progressive Web App) — one codebase, runs in the browser, installable on phone and desktop, no app store. Two surfaces: the **laptop/web surface is for authoring** content (creating topics, building vocabulary); the **mobile surface is for learning**. The fast text-based drill loop should remain available offline; media generation and first-introduction require a network connection.
 
 **3.4 Explicitly out of scope:** Handwriting kanji. Production is typing / selecting / speaking only.
 
@@ -46,13 +48,25 @@ These govern every decision below. Where a later requirement and a principle con
 
 ## 4. Writing Systems
 
-Japanese has three scripts: hiragana, katakana, and kanji. Romaji (Latin letters) is a crutch, not a target.
+Japanese has three scripts: hiragana, katakana, and kanji. Romaji (Latin letters) is a temporary scaffold, never the target — see §4.1.
 
 - **Hiragana first, then katakana** — the foundational first phases, learned before topical content begins in earnest.
 - **Kanji is withheld** until the learner reaches a proficient level, then introduced gradually.
 - **Kanji-unlock trigger:** mastery of both kana sets — every hiragana and katakana character "locked" in the app's spaced-repetition system. This is the pre-N5 → N5 boundary, the point where standardized Japanese study begins, and the app measures it directly.
 - **Kanji is then introduced in JLPT bands**, each gated by demonstrated mastery of the previous band: N5 (~100 kanji), N4 (~300 cumulative), N3 (~650), N2 (~1,000), N1 (~2,000+). The per-band lists use the well-established community-standard reference lists derived from the JLPT.
-- **Rendering rule:** every word stores all its script forms; the app renders only the form appropriate to the learner's level. Early on, all words and phrases display in kana only — kanji is stored but hidden — and surfaces progressively once the gate is passed. The fallback is always kana, never romaji.
+- **Rendering rule:** every word stores all its script forms; the app renders only the form appropriate to the learner's level. Kanji is stored but hidden until the kanji-unlock trigger, then surfaces progressively. The form shown in the beginner phase follows the script scaffold below.
+
+### 4.1 Beginner script scaffold
+
+*This revises the original "kana only, never romaji" rendering rule.* A true zero-knowledge learner cannot read kana on day one, so the first phase of a topic uses **romaji as a temporary, fading scaffold** — never a permanent crutch, never the target. The word's English meaning stays constant; the script support fades across three stages:
+
+- **Stage a** — English meaning + romaji
+- **Stage b** — English meaning + romaji + kana
+- **Stage c** — English meaning + kana (romaji removed)
+
+Romaji appears only in stages a and b and is gone by stage c. The learner's current stage is gated by their **kana mastery from the Structure track**: as the Structure track teaches hiragana and katakana, the Topic track drops the romaji scaffold in lockstep. A learner who already reads kana starts at stage c and never sees romaji — stages a and b are shown as skippable, with the learner's level visible.
+
+Kanji is absent from all three stages. "Kana" means hiragana and katakana only; kanji is a separate script, withheld entirely until the kanji-unlock trigger above. The principle is preserved — romaji is never the target and never permanent — but made implementable for a learner starting from zero.
 
 ---
 
@@ -65,7 +79,7 @@ Learning is compartmentalized into two tracks that run **in parallel**, not in s
 
 Running them in parallel is deliberate. A strict "finish all structure first" gate would force weeks of grammar drilling before the learner touches anything they care about; a taxonomy-only approach would lack the transfer layer. Parallel tracks give both at once — immediate progress on a wanted topic *while* the structural substrate builds underneath it.
 
-The tracks feed each other and intersect: the structure track supplies grammar and numbers; the taxonomy track supplies the context in which to use them. (See §6.2 — systematic sets are familiarized standalone in the structure track, then *used* inside taxonomies.)
+The tracks feed each other and intersect: the structure track supplies grammar and numbers; the taxonomy track supplies the context in which to use them. (See §6.2 — systematic sets are familiarized standalone in the structure track, then *used* inside taxonomies.) The romaji scaffold of §4.1 is one concrete intersection: Structure-track kana mastery directly controls how much script support the Topic track shows.
 
 **Compartmentalize the lanes; interleave inside each lane.** The learner always knows whether a session is a structure session or a taxonomy session. Interleaving (mixing items, see §11) happens *within* a track, not across the two.
 
@@ -92,7 +106,7 @@ Systematic sets are not a side category. They are **the transfer layer that make
 **7.1 The word record.** A word is a **single canonical record** — never duplicated. Context, not duplication, carries meaning. Attributes:
 
 - canonical form
-- script forms (hiragana / katakana / kanji as applicable)
+- script forms (hiragana / katakana / kanji as applicable) — plus the romaji reading used by the §4.1 scaffold
 - senses — multiple meanings; the same word is one word, and context determines which sense applies
 - grammatical forms — positive form, negative form, standard conventional uses — shown through concrete example sentences, not abstract rules
 - example sentences (demonstrating grammar and use)
@@ -129,7 +143,7 @@ Each word moves through a three-stage lifecycle. Familiarity gates stage 2; "loc
 
 **8.1 Stage 1 — Familiarize (the Recognition phase).** Visual learning carries this stage. For each word, presented within its taxonomy, in sequence:
 
-1. **The word** — audio first. The learner *hears* the word before seeing it written (listening-first; no romaji crutch).
+1. **The word** — audio first. The learner *hears* the word before seeing it written (listening-first). The written form follows the script scaffold of §4.1.
 2. **Contextual image** — the meaning anchor; instant, glanceable meaning.
 3. **Contextual phrase** — the word in a minimal frame; it has neighbors.
 4. **Video — the word in the taxonomy** — the word as a situated event, not a label.
@@ -202,7 +216,7 @@ The hard constraint on this whole model: **whatever shape proficiency takes, it 
 
 ## 13. MVP Summary — What v1 Is
 
-A web/PWA Japanese-learning app for English speakers, organized around two parallel learning tracks (Structure and Taxonomy). The learner picks topics; the system generates a context-rich, JLPT-calibrated vocabulary and phrase set, stored as shared canonical word records with per-context media. Each word is familiarized through a short rich-media recognition sequence, locked in through a fast drill loop with some typing, and retained through spaced repetition. Production is typing, selecting, and speaking — never handwriting. Kana is taught first; kanji is deferred until kana mastery, then introduced in JLPT bands. Progress is reported as both a functional (taxonomy mastery) and a standardized (JLPT band) number. The learner-facing experience stays spreadsheet-fast; all complexity lives behind glass. Accounts are per-user, and sharing taxonomies is encouraged.
+A web/PWA Japanese-learning app for English speakers, organized around two parallel learning tracks (Structure and Taxonomy). Content is authored on the laptop/web surface and learned on mobile. The learner picks topics; the system generates a context-rich, JLPT-calibrated vocabulary and phrase set, stored as shared canonical word records with per-context media. Each word is familiarized through a short rich-media recognition sequence — the written form following the §4.1 romaji-to-kana scaffold — locked in through a fast drill loop with some typing, and retained through spaced repetition. Production is typing, selecting, and speaking — never handwriting. Kana is taught first; kanji is deferred until kana mastery, then introduced in JLPT bands. Progress is reported as both a functional (taxonomy mastery) and a standardized (JLPT band) number. The learner-facing experience stays spreadsheet-fast; all complexity lives behind glass. Accounts are per-user, and sharing taxonomies is encouraged.
 
 ---
 
@@ -212,5 +226,6 @@ These do not block the MVP build and can be settled when the relevant phase is r
 
 - **Concrete JLPT band-gate thresholds** — the exact numeric criteria for advancing N5 → N4 → N3, etc. To be defined when the kanji phase is approached.
 - **Pronunciation-scoring depth** — whether "compare-to-correct" speaking uses simple recognition-match or finer pronunciation/pitch-accent scoring. The MVP may begin with recognition-match.
+- **Scaffold skip thresholds (§4.1)** — the exact kana-mastery levels at which stages a and b auto-skip. To be tuned during prototyping.
 
-*Resolved during the requirements phase: handwriting kanji — out of scope; platform — web + PWA; MVP audience — English speakers learning Japanese; testing — bidirectional; proficiency standard — JLPT spine with a CEFR-J/JF-style functional readout.*
+*Resolved during the requirements phase: handwriting kanji — out of scope; platform — web + PWA; MVP audience — English speakers learning Japanese; testing — bidirectional; proficiency standard — JLPT spine with a CEFR-J/JF-style functional readout. Refined during prototyping: §4.1 beginner script scaffold (romaji as a fading aid); laptop = authoring / mobile = learning surfaces.*
