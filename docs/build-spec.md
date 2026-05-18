@@ -130,7 +130,31 @@ The engine decides what the learner sees next. Roughly **80% deterministic ML, 2
 
 ---
 
-## 8. MVP scope
+## 8. Content Generation & Caching
+
+### 8.1 Generation pipeline
+
+Video and scenario generation is slow and expensive. It runs as a background pipeline — never blocking a learner.
+
+- **Enqueued at topic creation.** The moment a topic's words and scenarios are defined, the generation job starts, server-side. By the time any learner reaches the content, it is ready.
+- **Generated in learning order.** Chapter 1, core words, opening scenarios first; depth later. The pipeline needs only to stay *ahead* of the fastest learner (learners move at human speed), not finish instantly.
+- **Eager entry slice, lazy depth.** Eagerly generate the entry slice (where cold-start bites — bounded); generate deeper content lazily, as a topic shows real usage. Avoids spend on topics that get no use.
+- **Generated once, shared.** Media is persisted and reused by every learner (requirements.md §7.4–7.5), keyed to word + context — so emergent reorganisation never invalidates it. A request is matched semantically against the existing library first; new generation happens only on a genuine gap.
+- **Cold-start fallback.** If a learner reaches a topic before its video exists, that pass runs on images only — cheap, instant; video appears on a later visit. Never a spinner.
+
+### 8.2 Caching & the no-wait guarantee
+
+Principle: **heavy loading runs in parallel with the fast loop, never in series with a click.**
+
+- A session's media need is small and specific — Introduce clips for the session's *new* words only (~5–8, shown once each) plus assets for the scheduled scenarios. Review needs no media. Not the whole topic, not "everything."
+- At session start the app **pre-fetches that whole slice** as one batch into the browser cache.
+- The session opens with the **media-free Drill** — instant, client-side. It is the loading window.
+- **Media episodes are gated on their assets being local.** The engine never shows an Introduce or Scenario episode until its media is fully cached; until then it keeps the learner in the Drill (a deep, instant review buffer). The Drill stretches to cover loading — the learner is never idle, never on a spinner.
+- Drill content is tiny (text + SRS state): pre-loaded fully, runs entirely client-side and **offline**. Answers buffer locally and **sync in the background**. The FSRS scheduler is light math — it runs in-browser.
+
+---
+
+## 9. MVP scope
 
 **In v1:**
 - Screens: Onboarding, Home, Chapter view, the four Episodes, Progress. Authoring may be minimal or seeded.
@@ -144,7 +168,7 @@ The engine decides what the learner sees next. Roughly **80% deterministic ML, 2
 
 ---
 
-## 9. Non-negotiable constraints
+## 10. Non-negotiable constraints
 
 - **No handwriting.** Production is typing, tap-selecting, or speaking only. Handwriting is never required.
 - **Instrument, not a voice.** No streaks, points, badges, mascots, confetti, or cheerleading copy. The app states facts ("you are here"). Progress is shown plainly; correction happens quietly.
@@ -155,7 +179,7 @@ The engine decides what the learner sees next. Roughly **80% deterministic ML, 2
 
 ---
 
-## 10. Open items (flag for the builder; not blockers)
+## 11. Open items (flag for the builder; not blockers)
 
 - **Long-absence re-entry** — a learner returning after weeks must see "refresh," not "start over."
 - **Fresh-chapter cold start** — a brand-new AI-authored chapter's first version is the roughest; it improves as it is used.
