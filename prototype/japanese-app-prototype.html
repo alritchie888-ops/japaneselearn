@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nihongo — Process Prototype</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap');
+
+  :root{
+    --paper:#efe9da; --paper-deep:#e4dcc7; --card:#faf6ec; --card-2:#f3eee0;
+    --ink:#221f18; --ink-soft:#6c6555; --ink-faint:#a59d88;
+    --shu:#bd3a2c; --shu-deep:#982a20; --ai:#3a4a5a;
+    --line:#d7cdb6; --line-soft:#e3dbc7;
+    --good:#3f6f4a; --seal:#bd3a2c;
+    --f-display:'Fraunces',Georgia,serif;
+    --f-ui:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,sans-serif;
+    --f-jp:'Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic','YuGothic','Meiryo','Noto Sans JP',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:var(--f-ui); color:var(--ink);
+    background:
+      radial-gradient(circle at 18% 12%, rgba(255,255,255,.45), transparent 45%),
+      radial-gradient(circle at 85% 88%, rgba(189,58,44,.05), transparent 40%),
+      var(--paper);
+    background-attachment:fixed;
+    -webkit-font-smoothing:antialiased;
+    min-height:100%;
+    padding:34px 18px 70px;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.5;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.35'/></svg>");
+  }
+  .stage{max-width:1180px; margin:0 auto; position:relative; z-index:1;
+    animation:rise .7s cubic-bezier(.2,.7,.2,1) both;}
+  @keyframes rise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+
+  /* ---- top bar ---- */
+  .topbar{display:flex; align-items:flex-end; justify-content:space-between;
+    gap:24px; flex-wrap:wrap; margin-bottom:6px;}
+  .brand{display:flex; align-items:baseline; gap:14px;}
+  .brand .mark{font-family:var(--f-jp); font-size:34px; color:var(--shu); line-height:1;
+    border:2px solid var(--shu); border-radius:7px; padding:5px 9px 7px; font-weight:600;}
+  .brand h1{font-family:var(--f-display); font-weight:600; font-size:27px;
+    letter-spacing:-.01em; line-height:1.05;}
+  .brand .sub{font-size:12.5px; color:var(--ink-soft); margin-top:3px; letter-spacing:.02em;}
+
+  .toggle{display:flex; background:var(--card-2); border:1px solid var(--line);
+    border-radius:11px; padding:4px; gap:3px;}
+  .toggle button{font-family:var(--f-ui); font-size:12.5px; font-weight:600;
+    border:none; background:none; color:var(--ink-soft); cursor:pointer;
+    padding:8px 15px; border-radius:8px; letter-spacing:.02em; transition:.18s;}
+  .toggle button .dev{display:block; font-size:9.5px; font-weight:600; color:var(--ink-faint);
+    letter-spacing:.13em; text-transform:uppercase; margin-bottom:1px;}
+  .toggle button.on{background:var(--ink); color:var(--paper);}
+  .toggle button.on .dev{color:var(--shu);}
+
+  .caption{font-size:12.5px; color:var(--ink-soft); margin:14px 2px 22px;
+    border-left:2px solid var(--shu); padding-left:11px; line-height:1.5; max-width:620px;}
+  .caption b{color:var(--ink); font-weight:600;}
+
+  /* ---- device frames ---- */
+  .devwrap{display:flex; justify-content:center;}
+  .device{display:none;} .device.on{display:block;}
+
+  /* laptop */
+  .laptop{width:880px; max-width:100%;}
+  .laptop .lid{background:#2a261d; border-radius:16px 16px 4px 4px;
+    padding:11px 13px 13px; box-shadow:0 26px 50px -22px rgba(34,31,24,.5);}
+  .laptop .chrome{display:flex; align-items:center; gap:7px; padding:0 4px 10px;}
+  .laptop .chrome i{width:9px; height:9px; border-radius:50%; background:#5a5343; display:block;}
+  .laptop .chrome .url{margin-left:8px; font-size:10.5px; color:#9b9279;
+    background:#1f1c15; border-radius:5px; padding:5px 12px; flex:1;
+    font-family:var(--f-ui); letter-spacing:.03em;}
+  .laptop .viewport{background:var(--card); border-radius:5px; overflow:hidden;
+    height:560px; position:relative;}
+  .laptop .base{height:13px; background:linear-gradient(#cfc6ae,#b3a98d);
+    border-radius:0 0 13px 13px; margin:0 auto; width:96%;
+    box-shadow:0 12px 22px -12px rgba(34,31,24,.5);}
+  .laptop .notch{width:90px; height:7px; background:#b3a98d; margin:0 auto;
+    border-radius:0 0 7px 7px;}
+
+  /* phone */
+  .phone{width:372px; max-width:100%;}
+  .phone .shell{background:#2a261d; border-radius:42px; padding:13px;
+    box-shadow:0 30px 55px -22px rgba(34,31,24,.55);}
+  .phone .viewport{background:var(--card); border-radius:31px; overflow:hidden;
+    height:730px; position:relative;}
+  .phone .pnotch{position:absolute; top:0; left:50%; transform:translateX(-50%);
+    width:120px; height:24px; background:#2a261d; border-radius:0 0 15px 15px; z-index:40;}
+
+  /* ---- screens ---- */
+  .screen{position:absolute; inset:0; display:none; flex-direction:column;
+    animation:fade .32s ease both;}
+  .screen.active{display:flex;}
+  @keyframes fade{from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:none;}}
+  .scroll{flex:1; overflow-y:auto;}
+  .scroll::-webkit-scrollbar{width:0;}
+
+  /* generic ui bits */
+  .eyebrow{font-size:9.5px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--ink-faint);}
+  .eyebrow.shu{color:var(--shu);}
+  .h-disp{font-family:var(--f-display); font-weight:600; letter-spacing:-.015em;}
+  .jp{font-family:var(--f-jp);}
+  .btn{font-family:var(--f-ui); font-weight:600; cursor:pointer; border:none;
+    border-radius:10px; transition:.16s; letter-spacing:.01em;}
+  .btn-primary{background:var(--ink); color:var(--paper); padding:13px 20px; font-size:14px;}
+  .btn-primary:hover{background:var(--shu);}
+  .btn-ghost{background:none; border:1px solid var(--line); color:var(--ink-soft);
+    padding:9px 14px; font-size:12.5px;}
+  .btn-ghost:hover{border-color:var(--ink-soft); color:var(--ink);}
+  .back{font-size:12px; color:var(--ink-soft); cursor:pointer; display:inline-flex;
+    align-items:center; gap:5px; font-weight:600;}
+  .back:hover{color:var(--shu);}
+  .pill{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:600;
+    border-radius:20px; padding:4px 10px; letter-spacing:.02em;}
+  .pill-paper{background:var(--card-2); color:var(--ink-soft); border:1px solid var(--line);}
+  .pill-shu{background:rgba(189,58,44,.1); color:var(--shu-deep);}
+  .pill-good{background:rgba(63,111,74,.12); color:var(--good);}
+  .hr{height:1px; background:var(--line-soft); border:none;}
+
+  /* WEB — content studio */
+  .web-head{padding:26px 34px 18px; border-bottom:1px solid var(--line-soft);}
+  .web-body{padding:24px 34px 34px;}
+  .studio-tabs{display:flex; gap:6px; margin-top:14px;}
+  .studio-tabs .t{font-size:12px; font-weight:600; color:var(--ink-faint);
+    padding:6px 12px; border-radius:7px; cursor:default;}
+  .studio-tabs .t.on{background:var(--card-2); color:var(--ink);}
+
+  .tax-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:13px;}
+  .tax-card{background:var(--card-2); border:1px solid var(--line); border-radius:13px;
+    padding:16px; cursor:pointer; transition:.16s; min-height:118px; display:flex;
+    flex-direction:column; justify-content:space-between;}
+  .tax-card:hover{border-color:var(--shu); transform:translateY(-2px);}
+  .tax-card h4{font-family:var(--f-display); font-size:16.5px; font-weight:600; line-height:1.15;}
+  .tax-card .meta{font-size:11px; color:var(--ink-soft); margin-top:4px;}
+  .tax-card.new{border-style:dashed; align-items:center; justify-content:center; text-align:center;
+    color:var(--ink-soft);}
+  .tax-card.new .plus{font-size:24px; font-family:var(--f-display); color:var(--shu);}
+
+  .struct-strip{margin-top:24px; background:rgba(58,74,90,.06);
+    border:1px solid rgba(58,74,90,.18); border-radius:13px; padding:15px 17px;}
+  .struct-strip .row{display:flex; gap:8px; flex-wrap:wrap; margin-top:9px;}
+  .struct-chip{background:var(--card); border:1px solid var(--line); border-radius:8px;
+    font-size:11.5px; font-weight:600; padding:6px 11px; color:var(--ai);}
+
+  .field-label{font-size:11px; font-weight:700; color:var(--ink-soft);
+    letter-spacing:.04em; text-transform:uppercase; margin-bottom:7px;}
+  .topic-input{width:100%; font-family:var(--f-display); font-size:21px; font-weight:500;
+    border:none; border-bottom:2px solid var(--line); background:none; padding:8px 2px;
+    color:var(--ink); outline:none;}
+  .topic-input:focus{border-color:var(--shu);}
+  .topic-input::placeholder{color:var(--ink-faint);}
+  .chips{display:flex; gap:7px; flex-wrap:wrap; margin-top:13px;}
+  .chip{font-size:11.5px; font-weight:600; background:var(--card-2); border:1px solid var(--line);
+    border-radius:18px; padding:6px 12px; cursor:pointer; color:var(--ink-soft);}
+  .chip:hover{border-color:var(--shu); color:var(--shu);}
+
+  .gen-row{display:flex; align-items:center; gap:10px; font-size:12.5px;
+    color:var(--ink-soft); padding:11px 0;}
+  .spinner{width:15px; height:15px; border:2px solid var(--line);
+    border-top-color:var(--shu); border-radius:50%; animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .band-label{display:flex; align-items:center; gap:9px; margin:18px 0 9px; font-size:11px;
+    font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint);}
+  .band-label::after{content:""; flex:1; height:1px; background:var(--line-soft);}
+  .wordrow{display:flex; align-items:center; gap:13px; padding:10px 13px;
+    background:var(--card-2); border:1px solid var(--line-soft); border-radius:9px;
+    margin-bottom:6px; cursor:pointer; transition:.14s;}
+  .wordrow:hover{border-color:var(--shu);}
+  .wordrow .kana{font-family:var(--f-jp); font-size:18px; min-width:96px;}
+  .wordrow .en{font-size:13px; color:var(--ink-soft); flex:1;}
+  .wordrow .pos{font-size:10px; color:var(--ink-faint); font-style:italic;}
+
+  /* word record */
+  .rec-hero{display:flex; gap:20px; align-items:flex-start; padding:6px 0 18px;}
+  .rec-glyph{font-family:var(--f-jp); font-size:50px; line-height:1; color:var(--ink);}
+  .rec-hero .romaji{font-family:var(--f-display); font-style:italic; color:var(--shu);
+    font-size:15px;}
+  .rec-grid{display:grid; grid-template-columns:1fr 1fr; gap:13px;}
+  .rec-box{background:var(--card-2); border:1px solid var(--line-soft); border-radius:11px;
+    padding:13px 15px;}
+  .rec-box h5{font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--ink-faint); margin-bottom:8px;}
+  .rec-box .line{font-size:13px; padding:3px 0; color:var(--ink);}
+  .rec-box .line .jp{font-size:14.5px;}
+  .rec-box .line .g{color:var(--ink-soft);}
+  .media-slot{display:flex; align-items:center; gap:9px; font-size:12px; padding:6px 0;
+    color:var(--ink);}
+  .media-slot .ic{width:26px; height:26px; border-radius:6px; background:var(--card);
+    border:1px solid var(--line); display:flex; align-items:center; justify-content:center;
+    font-size:13px;}
+
+  /* MOBILE */
+  .m-top{padding:38px 20px 14px;}
+  .m-body{padding:4px 20px 24px;}
+  .m-greet{font-family:var(--f-display); font-size:21px; font-weight:600; letter-spacing:-.01em;}
+  .prof-chip{display:inline-flex; align-items:center; gap:6px; margin-top:9px;
+    background:var(--card-2); border:1px solid var(--line); border-radius:20px;
+    padding:5px 11px; font-size:11px; font-weight:600; color:var(--ink-soft);}
+  .prof-chip b{color:var(--shu); font-family:var(--f-jp);}
+
+  .track-card{border-radius:15px; padding:18px; margin-bottom:12px; cursor:pointer;
+    transition:.16s; border:1px solid; position:relative; overflow:hidden;}
+  .track-card:hover{transform:translateY(-2px);}
+  .track-card .tk-jp{position:absolute; right:-6px; bottom:-20px; font-family:var(--f-jp);
+    font-size:88px; opacity:.07; line-height:1;}
+  .track-card h3{font-family:var(--f-display); font-size:19px; font-weight:600;}
+  .track-card p{font-size:12px; margin-top:4px; line-height:1.45;}
+  .track-card .go{font-size:11px; font-weight:700; margin-top:12px; letter-spacing:.03em;}
+  .tc-structure{background:rgba(58,74,90,.07); border-color:rgba(58,74,90,.22);}
+  .tc-structure h3,.tc-structure .go{color:var(--ai);} .tc-structure p{color:var(--ink-soft);}
+  .tc-taxonomy{background:rgba(189,58,44,.07); border-color:rgba(189,58,44,.22);}
+  .tc-taxonomy h3,.tc-taxonomy .go{color:var(--shu-deep);} .tc-taxonomy p{color:var(--ink-soft);}
+  .parallel-note{font-size:11px; color:var(--ink-soft); text-align:center; line-height:1.5;
+    margin-top:6px; padding:0 8px;}
+
+  .m-listcard{background:var(--card-2); border:1px solid var(--line); border-radius:13px;
+    padding:15px; margin-bottom:10px; cursor:pointer; transition:.14s;}
+  .m-listcard:hover{border-color:var(--shu);}
+  .m-listcard h4{font-family:var(--f-display); font-size:16px; font-weight:600;}
+  .barwrap{height:7px; background:var(--line-soft); border-radius:5px; margin-top:9px;
+    overflow:hidden;}
+  .bar{height:100%; background:var(--shu); border-radius:5px; transition:width .6s ease;}
+
+  .m-word{display:flex; align-items:center; gap:12px; padding:11px 13px;
+    background:var(--card-2); border:1px solid var(--line-soft); border-radius:10px;
+    margin-bottom:6px; cursor:pointer; transition:.14s;}
+  .m-word:hover{border-color:var(--shu);}
+  .m-word .kana{font-family:var(--f-jp); font-size:18px; flex:1;}
+  .m-word .en{font-size:11.5px; color:var(--ink-soft);}
+  .status-dot{width:18px; height:18px; border-radius:50%; flex-shrink:0; display:flex;
+    align-items:center; justify-content:center; font-size:9px;}
+  .st-new{border:1.5px solid var(--line);}
+  .st-familiar{border:1.5px solid var(--shu); background:
+    linear-gradient(90deg,var(--shu) 50%, transparent 50%);}
+  .st-locked{background:var(--shu); color:#fff; font-family:var(--f-jp);
+    box-shadow:0 0 0 2px rgba(189,58,44,.18);}
+
+  /* introduce */
+  .intro-dots{display:flex; gap:6px; justify-content:center; padding:14px 0 4px;}
+  .intro-dots i{width:7px; height:7px; border-radius:50%; background:var(--line);
+    transition:.2s;}
+  .intro-dots i.on{background:var(--shu); width:20px; border-radius:4px;}
+  .intro-stage{flex:1; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; padding:14px 24px; text-align:center;}
+  .intro-step-name{font-size:10px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--ink-faint); margin-bottom:18px;}
+  .intro-kana{font-family:var(--f-jp); font-size:54px; line-height:1; margin-bottom:6px;}
+  .intro-en{font-family:var(--f-display); font-size:18px; color:var(--ink-soft); font-style:italic;}
+  .sc-row{display:flex; gap:5px; margin-bottom:20px;}
+  .sc-chip{font-family:var(--f-ui); font-size:9.5px; font-weight:600; border:1px solid var(--line);
+    background:var(--card-2); color:var(--ink-faint); border-radius:7px; padding:5px 8px;
+    cursor:pointer; letter-spacing:.02em; transition:.14s;}
+  .sc-chip b{font-size:11px; color:var(--shu);}
+  .sc-chip:hover{border-color:var(--shu);}
+  .sc-chip.on{background:var(--ink); color:var(--paper); border-color:var(--ink);}
+  .sc-chip.on b{color:#fff;}
+  .sc-note{font-size:10.5px; color:var(--ink-soft); margin-top:16px; line-height:1.55;
+    max-width:248px;}
+  .mora-row{display:flex; gap:11px; justify-content:center; flex-wrap:wrap; margin-bottom:10px;}
+  .mora{display:flex; flex-direction:column; align-items:center;}
+  .mora .k{font-family:var(--f-jp); font-size:44px; line-height:1;}
+  .mora .r{font-family:var(--f-display); font-style:italic; font-size:14px;
+    color:var(--shu); margin-top:5px;}
+  .audio-btn{margin-top:18px; display:inline-flex; align-items:center; gap:8px;
+    background:var(--ink); color:var(--paper); border:none; border-radius:22px;
+    padding:10px 18px; font-family:var(--f-ui); font-weight:600; font-size:12.5px; cursor:pointer;}
+  .audio-btn:hover{background:var(--shu);}
+  .audio-btn.playing{background:var(--shu);}
+  .ctx-art{width:152px; height:152px; border-radius:16px; background:var(--card-2);
+    border:1px solid var(--line); display:flex; align-items:center; justify-content:center;
+    margin-bottom:8px;}
+  .ctx-art svg{width:88px; height:88px;}
+  .placeholder-tag{font-size:9.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--ink-faint);}
+  .predict-q{font-family:var(--f-display); font-size:16px; margin:14px 0 12px;}
+  .reveal-box{min-height:30px;}
+  .reveal-word{font-size:22px; color:var(--ink); line-height:1.3;}
+  .reveal-en{font-size:14px; color:var(--shu); font-weight:600; margin-top:2px;}
+  .video-panel{width:230px; height:138px; border-radius:13px; position:relative;
+    background:linear-gradient(135deg,#2a261d,#403a2c); display:flex; align-items:center;
+    justify-content:center; overflow:hidden; margin-bottom:8px;}
+  .video-panel::after{content:""; position:absolute; inset:0;
+    background:repeating-linear-gradient(115deg,transparent 0 18px,rgba(255,255,255,.025) 18px 36px);}
+  .play-tri{width:0; height:0; border-style:solid; border-width:13px 0 13px 21px;
+    border-color:transparent transparent transparent rgba(255,255,255,.85);
+    margin-left:5px;}
+  .video-cap{font-size:10.5px; color:var(--ink-faint); margin-top:2px;}
+  .ctx-phrase{font-family:var(--f-jp); font-size:24px; line-height:1.5; margin-bottom:6px;}
+  .ctx-phrase b{color:var(--shu);}
+  .ctx-roma{font-family:var(--f-display); font-style:italic; font-size:16px;
+    color:var(--shu); margin-bottom:8px; line-height:1.4;}
+  .ctx-roma b{font-weight:700;}
+  .shadow-roma{font-family:var(--f-display); font-style:italic; font-size:12.5px;
+    color:var(--shu); margin-top:3px; line-height:1.4;}
+  .shadow-roma b{font-weight:700;}
+  .use-block{width:250px; border:1px solid var(--line); border-radius:14px; overflow:hidden;}
+  .use-video{height:140px; position:relative; display:flex; align-items:center;
+    justify-content:center; background:linear-gradient(135deg,#2a261d,#403a2c);}
+  .use-video::after{content:""; position:absolute; inset:0;
+    background:repeating-linear-gradient(115deg,transparent 0 18px,rgba(255,255,255,.025) 18px 36px);}
+  .use-tag{position:absolute; bottom:8px; left:0; right:0; text-align:center; font-size:9px;
+    font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.45);}
+  .shadow-card{background:var(--card-2); border-top:1px solid var(--line);
+    padding:13px 14px 15px; text-align:center;}
+  .shadow-lbl{font-size:9.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--shu); margin-bottom:9px;}
+  .shadow-phrase{font-family:var(--f-jp); font-size:19px; line-height:1.4;}
+  .shadow-phrase b{color:var(--shu);}
+  .shadow-en{font-size:10.5px; color:var(--ink-soft); font-style:italic; margin:3px 0 11px;}
+  .shadow-actions{display:flex; gap:7px; justify-content:center; align-items:center;}
+  .shadow-actions .btn-ghost{padding:7px 11px; font-size:11px;}
+  .shadow-actions .audio-btn{margin-top:0; padding:8px 13px; font-size:11.5px;}
+  .shadow-result{margin-top:11px;}
+  .sr-score{font-family:var(--f-display); font-size:30px; font-weight:600; line-height:1;}
+  .sr-verdict{font-size:11px; font-weight:700; margin-top:2px; letter-spacing:.02em;}
+  .sr-heard{font-size:10.5px; color:var(--ink-soft); margin-top:7px; line-height:1.5;}
+  .sr-warn{font-size:10.5px; color:var(--shu-deep); line-height:1.5; display:block;}
+  .intro-foot{padding:14px 20px 18px; border-top:1px solid var(--line-soft);}
+
+  /* drill */
+  .drill-bar{display:flex; justify-content:space-between; align-items:center;
+    padding:14px 20px 8px; font-size:11px; color:var(--ink-soft); font-weight:600;}
+  .drill-stage{flex:1; display:flex; flex-direction:column; padding:8px 20px 16px;}
+  .drill-card{background:var(--card-2); border:1px solid var(--line); border-radius:16px;
+    padding:30px 20px; text-align:center; margin-bottom:14px;}
+  .drill-dir{font-size:10px; font-weight:700; letter-spacing:.13em; text-transform:uppercase;
+    color:var(--shu); margin-bottom:14px;}
+  .drill-prompt{font-family:var(--f-jp); font-size:46px; line-height:1.1;}
+  .drill-prompt.en{font-family:var(--f-display); font-size:30px; font-style:italic;}
+  .drill-opts{display:flex; flex-direction:column; gap:8px;}
+  .opt{font-family:var(--f-ui); font-size:15px; font-weight:600; padding:14px;
+    background:var(--card-2); border:1px solid var(--line); border-radius:11px;
+    cursor:pointer; transition:.13s; color:var(--ink);}
+  .opt .jp{font-family:var(--f-jp); font-size:18px;}
+  .opt:hover{border-color:var(--shu);}
+  .opt.correct{background:rgba(63,111,74,.13); border-color:var(--good); color:var(--good);}
+  .opt.wrong{background:rgba(189,58,44,.1); border-color:var(--shu); color:var(--shu-deep);}
+  .opt.dim{opacity:.4;}
+
+  /* hanko stamp */
+  .stamp{position:absolute; top:50%; left:50%; z-index:60;
+    transform:translate(-50%,-50%) scale(1.8) rotate(-14deg); opacity:0;}
+  .stamp.fire{animation:stampin 1.5s cubic-bezier(.2,.8,.2,1) forwards;}
+  @keyframes stampin{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(2.1) rotate(-22deg);}
+    18%{opacity:1;transform:translate(-50%,-50%) scale(.92) rotate(-9deg);}
+    30%{transform:translate(-50%,-50%) scale(1) rotate(-11deg);}
+    78%{opacity:1;}
+    100%{opacity:0;transform:translate(-50%,-50%) scale(1) rotate(-11deg);}
+  }
+  .seal{width:92px; height:92px; border:4px solid var(--seal); border-radius:11px;
+    display:flex; align-items:center; justify-content:center; font-family:var(--f-jp);
+    font-size:42px; color:var(--seal); font-weight:600; background:rgba(250,246,236,.6);
+    box-shadow:0 0 0 6px rgba(189,58,44,.08);}
+
+  /* proficiency */
+  .prof-block{background:var(--card-2); border:1px solid var(--line); border-radius:14px;
+    padding:18px; margin-bottom:13px;}
+  .prof-num{font-family:var(--f-display); font-size:42px; font-weight:600; color:var(--shu);
+    line-height:1;}
+  .prof-cando{font-size:12px; color:var(--ink-soft); margin-top:10px; line-height:1.5;}
+  .prof-cando b{color:var(--ink);}
+  .jlpt-band{display:flex; align-items:baseline; gap:8px;}
+  .jlpt-band .lvl{font-family:var(--f-jp); font-size:30px; font-weight:600; color:var(--ai);}
+
+  /* bottom nav */
+  .m-nav{display:flex; border-top:1px solid var(--line); background:var(--card);}
+  .m-nav button{flex:1; border:none; background:none; padding:11px 0 13px; cursor:pointer;
+    font-family:var(--f-ui); font-size:10px; font-weight:700; color:var(--ink-faint);
+    letter-spacing:.05em;}
+  .m-nav button .ni{display:block; font-size:15px; margin-bottom:2px;}
+  .m-nav button.on{color:var(--shu);}
+
+  .toast{position:absolute; bottom:74px; left:50%; transform:translateX(-50%);
+    background:var(--ink); color:var(--paper); font-size:11.5px; font-weight:600;
+    padding:8px 15px; border-radius:20px; opacity:0; transition:.25s; z-index:50;
+    white-space:nowrap;}
+  .toast.show{opacity:1; bottom:84px;}
+
+  .footnote{text-align:center; font-size:11px; color:var(--ink-faint); margin-top:24px;
+    line-height:1.6;}
+
+  /* structure mini-drill */
+  .struct-set{display:flex; align-items:center; gap:12px; padding:13px;
+    background:var(--card-2); border:1px solid var(--line-soft); border-radius:11px;
+    margin-bottom:8px; cursor:pointer; transition:.14s;}
+  .struct-set:hover{border-color:var(--ai);}
+  .struct-set .sg{font-family:var(--f-jp); font-size:22px; color:var(--ai); width:40px;
+    text-align:center;}
+  .struct-set h4{font-size:14px; font-weight:600;}
+  .struct-set .d{font-size:11px; color:var(--ink-soft);}
+
+  @media(max-width:560px){
+    .tax-grid{grid-template-columns:1fr 1fr;}
+    .rec-grid{grid-template-columns:1fr;}
+    .laptop .viewport{height:520px;}
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="mark jp">学</div>
+      <div>
+        <h1>Nihongo — Process Prototype</h1>
+        <div class="sub">Stage 1 · clickable shell · mock data &amp; placeholder media</div>
+      </div>
+    </div>
+    <div class="toggle">
+      <button id="tgWeb" class="on" onclick="setSurface('web')">
+        <span class="dev">Laptop</span>Web · Authoring</button>
+      <button id="tgMob" onclick="setSurface('mobile')">
+        <span class="dev">Mobile</span>Learning</button>
+    </div>
+  </div>
+
+  <div class="caption">
+    Walk the whole flow. <b>Web surface</b> is where content gets added — name a topic,
+    the system builds its vocabulary. <b>Mobile surface</b> is where learning happens —
+    two parallel tracks, the introduce sequence, the drill loop, the proficiency readout.
+    Nothing here is real (no AI, no backend) — it exists only to check whether the
+    <b>process feels right</b>.
+  </div>
+
+  <div class="devwrap">
+
+    <!-- ============ WEB / LAPTOP ============ -->
+    <div class="device on" id="webDevice">
+      <div class="laptop">
+        <div class="lid">
+          <div class="chrome">
+            <i></i><i></i><i></i>
+            <span class="url">studio.nihongo.app  ·  Content Studio</span>
+          </div>
+          <div class="viewport">
+
+            <!-- W1 library -->
+            <div class="screen active" id="w-library">
+              <div class="web-head">
+                <div class="eyebrow shu">Content Studio · Web</div>
+                <h2 class="h-disp" style="font-size:24px;margin-top:5px;">Topics</h2>
+                <div style="font-size:12.5px;color:var(--ink-soft);margin-top:3px;">
+                  Topic-based learning units. Author here on the laptop; learners study them on mobile.</div>
+                <div class="studio-tabs">
+                  <span class="t on">Topics</span>
+                  <span class="t">Structure sets</span>
+                  <span class="t">Media library</span>
+                </div>
+              </div>
+              <div class="web-body scroll">
+                <div class="tax-grid">
+                  <div class="tax-card" onclick="openTopic('Ordering Sushi')">
+                    <div>
+                      <h4>Ordering Sushi</h4>
+                      <div class="meta">6 words · 3 complexity bands</div>
+                    </div>
+                    <span class="pill pill-good">● ready</span>
+                  </div>
+                  <div class="tax-card" onclick="openTopic('Learning to Drive')">
+                    <div>
+                      <h4>Learning to Drive</h4>
+                      <div class="meta">building vocabulary &amp; media…</div>
+                    </div>
+                    <span class="pill pill-shu"><span class="spinner" style="width:9px;height:9px;border-width:1.5px;"></span> generating</span>
+                  </div>
+                  <div class="tax-card" onclick="openTopic('At the Clinic')">
+                    <div>
+                      <h4>At the Clinic</h4>
+                      <div class="meta">11 words · 4 complexity bands</div>
+                    </div>
+                    <span class="pill pill-good">● ready</span>
+                  </div>
+                  <div class="tax-card new" onclick="showWeb('new')">
+                    <div class="plus jp">＋</div>
+                    <div style="font-size:12.5px;font-weight:600;margin-top:4px;">New topic</div>
+                  </div>
+                </div>
+
+                <div class="struct-strip">
+                  <div class="eyebrow" style="color:var(--ai);">Structure sets · the parallel track</div>
+                  <div style="font-size:12px;color:var(--ink-soft);margin-top:5px;line-height:1.5;">
+                    Foundational, rule-based sets — shared by every topic. Authored once,
+                    learned alongside topics, not before them.</div>
+                  <div class="row">
+                    <span class="struct-chip jp">Hiragana 46</span>
+                    <span class="struct-chip jp">Katakana 46</span>
+                    <span class="struct-chip">Numbers</span>
+                    <span class="struct-chip">Counters</span>
+                    <span class="struct-chip">Time &amp; calendar</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- W2 topic word list -->
+            <div class="screen" id="w-topic">
+              <div class="web-head">
+                <span class="back" onclick="showWeb('library')">← Topics</span>
+                <h2 class="h-disp" style="font-size:24px;margin-top:10px;" id="topicTitle">Topic</h2>
+              </div>
+              <div class="web-body scroll" id="topicBody">
+                <div style="font-size:12px;color:var(--ink-soft);margin:6px 0 12px;">Select a word to see the canonical record.</div>
+              </div>
+            </div>
+
+            <!-- W3 new taxonomy -->
+            <div class="screen" id="w-new">
+              <div class="web-head">
+                <span class="back" onclick="showWeb('library')">← Topics</span>
+                <h2 class="h-disp" style="font-size:24px;margin-top:10px;">New topic</h2>
+              </div>
+              <div class="web-body scroll">
+                <div class="field-label">Name a topic — anything the learner wants to do</div>
+                <input class="topic-input" id="topicInput" placeholder="e.g. ordering sushi">
+                <div class="chips">
+                  <span class="chip" onclick="fillTopic('Ordering sushi')">Ordering sushi</span>
+                  <span class="chip" onclick="fillTopic('Renting an apartment')">Renting an apartment</span>
+                  <span class="chip" onclick="fillTopic('Negotiating a contract')">Negotiating a contract</span>
+                </div>
+                <button class="btn btn-primary" style="margin-top:22px;" onclick="generateTaxonomy()">
+                  Generate vocabulary &amp; phrases →</button>
+
+                <div id="genArea" style="margin-top:8px;"></div>
+              </div>
+            </div>
+
+            <!-- W3 word record -->
+            <div class="screen" id="w-record">
+              <div class="web-head">
+                <span class="back" id="recBack" onclick="showWeb('library')">← back</span>
+                <div class="eyebrow shu" style="margin-top:10px;">Word record · the canonical unit</div>
+              </div>
+              <div class="web-body scroll">
+                <div class="rec-hero">
+                  <div class="rec-glyph jp">注文する</div>
+                  <div>
+                    <div class="romaji">chūmon suru</div>
+                    <div style="font-size:13px;color:var(--ink-soft);margin-top:3px;">
+                      verb · <span class="jp">ちゅうもんする</span></div>
+                    <div style="margin-top:9px;">
+                      <span class="pill pill-paper">in: Ordering Sushi</span>
+                      <span class="pill pill-paper" style="margin-left:4px;">band 3 · complex</span>
+                    </div>
+                  </div>
+                </div>
+                <div style="font-size:11.5px;color:var(--ink-soft);margin-bottom:12px;line-height:1.5;">
+                  One canonical record — never duplicated. Meaning is carried by context,
+                  grammar by examples, media by the word↔topic link.</div>
+                <div class="rec-grid">
+                  <div class="rec-box">
+                    <h5>Senses</h5>
+                    <div class="line">1 · to order (food, goods)</div>
+                    <div class="line">2 · to place a request</div>
+                  </div>
+                  <div class="rec-box">
+                    <h5>Script forms</h5>
+                    <div class="line"><span class="g">kanji</span> &nbsp;<span class="jp">注文する</span></div>
+                    <div class="line"><span class="g">kana</span> &nbsp;<span class="jp">ちゅうもんする</span></div>
+                    <div class="line" style="font-size:11px;color:var(--ink-faint);">
+                      kanji hidden from learner until kana mastered</div>
+                  </div>
+                  <div class="rec-box">
+                    <h5>Grammatical forms</h5>
+                    <div class="line"><span class="g">positive</span> &nbsp;<span class="jp">注文します</span></div>
+                    <div class="line"><span class="g">negative</span> &nbsp;<span class="jp">注文しません</span></div>
+                    <div class="line"><span class="g">past</span> &nbsp;<span class="jp">注文しました</span></div>
+                  </div>
+                  <div class="rec-box">
+                    <h5>Example sentences</h5>
+                    <div class="line"><span class="jp">これを注文します。</span></div>
+                    <div class="line g" style="font-size:11px;">I'll order this.</div>
+                    <div class="line" style="margin-top:5px;"><span class="jp">まだ注文していません。</span></div>
+                    <div class="line g" style="font-size:11px;">I haven't ordered yet.</div>
+                  </div>
+                </div>
+                <div class="rec-box" style="margin-top:13px;">
+                  <h5>Word ↔ topic media — generated once, shared by every learner</h5>
+                  <div class="media-slot"><span class="ic">▦</span> contextual image
+                    <span class="pill pill-good" style="margin-left:auto;">cached · shared</span></div>
+                  <div class="media-slot"><span class="ic jp">あ</span> contextual phrase
+                    <span class="pill pill-good" style="margin-left:auto;">cached · shared</span></div>
+                  <div class="media-slot"><span class="ic">▶</span> video · word in the topic
+                    <span class="pill pill-good" style="margin-left:auto;">cached · shared</span></div>
+                  <div class="media-slot"><span class="ic">▶</span> video · word in use
+                    <span class="pill pill-good" style="margin-left:auto;">cached · shared</span></div>
+                  <div class="media-slot"><span class="ic">♪</span> audio
+                    <span class="pill pill-good" style="margin-left:auto;">cached · shared</span></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <div class="notch"></div>
+        <div class="base"></div>
+      </div>
+    </div>
+
+    <!-- ============ MOBILE / PHONE ============ -->
+    <div class="device" id="mobileDevice">
+      <div class="phone">
+        <div class="shell">
+          <div class="viewport">
+            <div class="pnotch"></div>
+            <div class="toast" id="toast"></div>
+
+            <!-- M home -->
+            <div class="screen active" id="m-home">
+              <div class="m-top">
+                <div class="eyebrow shu">日本語 · Learn</div>
+                <div class="m-greet">Good evening, Al</div>
+                <div class="prof-chip">proficiency estimate&nbsp; <b>≈ pre-N5</b></div>
+              </div>
+              <div class="m-body scroll" style="flex:1;">
+                <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin:6px 0 10px;">
+                  Two tracks · learned in parallel</div>
+                <div class="track-card tc-structure" onclick="showMobile('structure')">
+                  <span class="tk-jp">字</span>
+                  <h3>Structure</h3>
+                  <p>Kana, numbers, counters, grammar patterns —<br>the system that makes everything transfer.</p>
+                  <div class="go">CONTINUE — hiragana 38 / 46 →</div>
+                </div>
+                <div class="track-card tc-taxonomy" onclick="showMobile('taxonomy')">
+                  <span class="tk-jp">話</span>
+                  <h3>Topics</h3>
+                  <p>Real topics you choose — ordering sushi,<br>driving, contracts. Learn to <i>do</i> things.</p>
+                  <div class="go">CONTINUE — ordering sushi →</div>
+                </div>
+                <div class="parallel-note">
+                  Neither gates the other. The structure track is the connective tissue
+                  that turns topic knowledge into real proficiency.</div>
+              </div>
+              <div class="m-nav">
+                <button class="on"><span class="ni">⌂</span>Home</button>
+                <button onclick="showMobile('proficiency')"><span class="ni">◔</span>Progress</button>
+              </div>
+            </div>
+
+            <!-- M taxonomy list -->
+            <div class="screen" id="m-taxonomy">
+              <div class="m-top" style="padding-bottom:6px;">
+                <span class="back" onclick="showMobile('home')">← Home</span>
+                <div class="m-greet" style="margin-top:9px;">Topics</div>
+              </div>
+              <div class="m-body scroll" style="flex:1;">
+                <div style="font-size:11.5px;color:var(--ink-soft);margin:4px 0 12px;">Topics you've adopted.</div>
+                <div class="m-listcard" onclick="showMobile('detail')">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                    <h4>Ordering Sushi</h4>
+                    <span style="font-size:13px;font-weight:700;color:var(--shu);" id="taxPct">17%</span>
+                  </div>
+                  <div style="font-size:11px;color:var(--ink-soft);margin-top:2px;">
+                    functional mastery · 6 words</div>
+                  <div class="barwrap"><div class="bar" id="taxBar" style="width:17%;"></div></div>
+                </div>
+                <div class="m-listcard" style="opacity:.6;">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                    <h4>At the Clinic</h4><span style="font-size:13px;font-weight:700;color:var(--ink-faint);">0%</span>
+                  </div>
+                  <div style="font-size:11px;color:var(--ink-soft);margin-top:2px;">not started</div>
+                  <div class="barwrap"><div class="bar" style="width:0;"></div></div>
+                </div>
+                <div style="text-align:center;font-size:11px;color:var(--ink-faint);margin-top:14px;">
+                  + adopt a shared topic from the library</div>
+              </div>
+            </div>
+
+            <!-- M taxonomy detail -->
+            <div class="screen" id="m-detail">
+              <div class="m-top" style="padding-bottom:6px;">
+                <span class="back" onclick="showMobile('taxonomy')">← Topics</span>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:9px;">
+                  <div class="m-greet">Ordering Sushi</div>
+                  <span style="font-size:13px;font-weight:700;color:var(--shu);" id="detailPct">17%</span>
+                </div>
+              </div>
+              <div class="m-body scroll" style="flex:1;" id="detailList"></div>
+              <div class="intro-foot" style="border-top:1px solid var(--line);">
+                <button class="btn btn-primary" style="width:100%;" onclick="startDrill()">
+                  Drill ready words →</button>
+                <div style="font-size:10.5px;color:var(--ink-faint);text-align:center;margin-top:7px;">
+                  tap a new word to introduce it · drilling needs familiar words</div>
+              </div>
+            </div>
+
+            <!-- M introduce -->
+            <div class="screen" id="m-introduce">
+              <div class="m-top" style="padding:30px 20px 0;">
+                <span class="back" onclick="showMobile('detail')">← Cancel</span>
+                <div class="eyebrow shu" style="margin-top:8px;">Introduce · familiarize</div>
+                <div class="intro-dots" id="introDots"></div>
+              </div>
+              <div class="intro-stage" id="introStage"></div>
+              <div class="intro-foot">
+                <button class="btn btn-primary" style="width:100%;" id="introNextBtn"
+                  onclick="introNext()">Next →</button>
+              </div>
+            </div>
+
+            <!-- M familiarity check -->
+            <div class="screen" id="m-check">
+              <div class="m-top" style="padding:30px 20px 0;">
+                <span class="back" onclick="showMobile('detail')">← Cancel</span>
+                <div class="eyebrow shu" style="margin-top:8px;">Familiarity check · earn it</div>
+                <div style="font-size:11.5px;color:var(--ink-soft);margin-top:5px;line-height:1.5;">
+                  Introduce builds exposure — this confirms it. Pass both questions
+                  and the word becomes <i>familiar</i>.</div>
+              </div>
+              <div class="drill-stage" id="checkStage"></div>
+            </div>
+
+            <!-- M drill -->
+            <div class="screen" id="m-drill">
+              <div class="drill-bar">
+                <span class="back" onclick="showMobile('detail')">← Detail</span>
+                <span id="drillCount">queue 0 · locked 0</span>
+              </div>
+              <div class="drill-stage" id="drillStage"></div>
+            </div>
+
+            <!-- M proficiency -->
+            <div class="screen" id="m-proficiency">
+              <div class="m-top" style="padding-bottom:6px;">
+                <span class="back" onclick="showMobile('home')">← Home</span>
+                <div class="m-greet" style="margin-top:9px;">Progress</div>
+              </div>
+              <div class="m-body scroll" style="flex:1;">
+                <div class="eyebrow shu" style="margin:6px 0 8px;">Functional readout — what you can do</div>
+                <div class="prof-block">
+                  <div style="font-size:12px;color:var(--ink-soft);">Ordering Sushi · comprehensive mastery</div>
+                  <div class="prof-num" id="profNum">17%</div>
+                  <div class="barwrap" style="margin-top:8px;"><div class="bar" id="profBar" style="width:17%;"></div></div>
+                  <div class="prof-cando" id="profCando"></div>
+                </div>
+                <div class="eyebrow" style="color:var(--ai);margin:18px 0 8px;">
+                  Standardized readout — comparable to the bar</div>
+                <div class="prof-block" style="background:rgba(58,74,90,.06);border-color:rgba(58,74,90,.2);">
+                  <div style="font-size:12px;color:var(--ink-soft);">JLPT estimate</div>
+                  <div class="jlpt-band" style="margin-top:6px;">
+                    <span class="lvl jp" id="jlptLvl">pre-N5</span>
+                    <span style="font-size:12px;color:var(--ink-soft);">kana foundation in progress</span>
+                  </div>
+                  <div style="font-size:11.5px;color:var(--ink-soft);margin-top:10px;line-height:1.5;">
+                    Computed by mapping your locked words, kanji and grammar against JLPT
+                    reference lists. Kanji unlocks once both kana sets are mastered.</div>
+                </div>
+                <div style="font-size:11px;color:var(--ink-faint);text-align:center;margin-top:12px;line-height:1.5;">
+                  One number is <i>useful</i>, the other is <i>comparable</i>.<br>Both fall straight
+                  out of the spaced-repetition data.</div>
+              </div>
+              <div class="m-nav">
+                <button onclick="showMobile('home')"><span class="ni">⌂</span>Home</button>
+                <button class="on"><span class="ni">◔</span>Progress</button>
+              </div>
+            </div>
+
+            <!-- M structure -->
+            <div class="screen" id="m-structure">
+              <div class="m-top" style="padding-bottom:6px;">
+                <span class="back" onclick="showMobile('home')">← Home</span>
+                <div class="m-greet" style="margin-top:9px;">Structure track</div>
+              </div>
+              <div class="m-body scroll" style="flex:1;" id="structBody">
+                <div style="font-size:11.5px;color:var(--ink-soft);margin:4px 0 12px;line-height:1.5;">
+                  Rule-based sets. Learn the pattern, then drill only the exceptions.</div>
+                <div class="struct-set" onclick="structDrill()">
+                  <span class="sg">あ</span>
+                  <div style="flex:1;"><h4>Hiragana</h4><div class="d">38 / 46 locked</div></div>
+                  <span class="pill pill-shu">resume</span>
+                </div>
+                <div class="struct-set" style="opacity:.7;">
+                  <span class="sg">ア</span>
+                  <div style="flex:1;"><h4>Katakana</h4><div class="d">not started</div></div>
+                </div>
+                <div class="struct-set" style="opacity:.7;">
+                  <span class="sg">数</span>
+                  <div style="flex:1;"><h4>Numbers &amp; counters</h4><div class="d">pattern + exceptions</div></div>
+                </div>
+                <div class="parallel-note" style="margin-top:14px;">
+                  This track runs in parallel with your topics — it's the
+                  transfer layer underneath them.</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footnote">
+    Stage 1 prototype · placeholder media, in-memory state (resets on reload).<br>
+    Tell me what feels wrong and I'll revise — that loop is how we check the process.
+  </div>
+
+</div>
+
+<script>
+/* ---------- data ---------- */
+const ART = {
+  sushi:'<svg viewBox="0 0 100 100" fill="none" stroke="%23221f18" stroke-width="3"><ellipse cx="50" cy="62" rx="34" ry="15"/><path d="M20 56 q30 -16 60 0" fill="rgba(189,58,44,.85)" stroke="none"/><path d="M20 56 q30 -16 60 0"/></svg>',
+  ocha:'<svg viewBox="0 0 100 100" fill="none" stroke="%23221f18" stroke-width="3"><path d="M28 45 h44 v22 a22 22 0 0 1 -44 0 z"/><path d="M72 50 h9 a8 8 0 0 1 0 16 h-9"/><path d="M44 30 q4 -8 0 -14 M56 30 q4 -8 0 -14" stroke="rgba(189,58,44,.7)"/></svg>',
+  oishii:'<svg viewBox="0 0 100 100" fill="none" stroke="%23221f18" stroke-width="3"><circle cx="50" cy="52" r="30"/><path d="M38 46 h.1 M62 46 h.1" stroke-width="6" stroke-linecap="round"/><path d="M38 62 q12 12 24 0"/><path d="M76 24 l5 5 M81 24 l-5 5" stroke="rgba(189,58,44,.8)"/></svg>',
+  sumimasen:'<svg viewBox="0 0 100 100" fill="none" stroke="%23221f18" stroke-width="3"><circle cx="50" cy="32" r="12"/><path d="M30 78 q20 -30 40 0" stroke-linecap="round"/><path d="M50 44 v18"/></svg>',
+  osusume:'<svg viewBox="0 0 100 100" fill="none" stroke="%23221f18" stroke-width="3"><path d="M50 20 l9 19 21 3 -15 15 4 21 -19 -10 -19 10 4 -21 -15 -15 21 -3 z" fill="rgba(189,58,44,.85)" stroke="none"/><path d="M50 20 l9 19 21 3 -15 15 4 21 -19 -10 -19 10 4 -21 -15 -15 21 -3 z"/></svg>',
+  chuumon:'<svg viewBox="0 0 100 100" fill="none" stroke="%23221f18" stroke-width="3"><rect x="28" y="22" width="44" height="56" rx="4"/><path d="M38 38 h24 M38 50 h24 M38 62 h14" stroke-linecap="round"/><circle cx="70" cy="70" r="13" fill="rgba(189,58,44,.85)" stroke="none"/><path d="M64 70 l4 4 8 -9" stroke="%23faf6ec"/></svg>'
+};
+const WORDS = [
+  {id:'sushi',   kana:'すし',     romaji:'sushi',     en:'sushi',          pos:'noun',         band:1,
+    mora:[['す','su'],['し','shi']],
+    phrase:['','すし','をください'], phraseEn:'Sushi, please.',
+    phraseRomaji:'sushi o kudasai', phraseKanji:'寿司をください'},
+  {id:'ocha',    kana:'おちゃ',   romaji:'ocha',      en:'tea',            pos:'noun',         band:1,
+    mora:[['お','o'],['ちゃ','cha']],
+    phrase:['','おちゃ','をおねがいします'], phraseEn:'Tea, please.',
+    phraseRomaji:'ocha o onegai shimasu', phraseKanji:'お茶をお願いします'},
+  {id:'oishii',  kana:'おいしい', romaji:'oishii',    en:'delicious',      pos:'adjective',    band:1,
+    mora:[['お','o'],['い','i'],['し','shi'],['い','i']],
+    phrase:['とても ','おいしい','です'], phraseEn:'It is very delicious.',
+    phraseRomaji:'totemo oishii desu', phraseKanji:'とても美味しいです'},
+  {id:'sumimasen',kana:'すみません',romaji:'sumimasen',en:'excuse me',     pos:'phrase',       band:2,
+    mora:[['す','su'],['み','mi'],['ま','ma'],['せ','se'],['ん','n']],
+    phrase:['','すみません','、メニューをください'], phraseEn:'Excuse me, the menu please.',
+    phraseRomaji:'sumimasen, menyū o kudasai', phraseKanji:'すみませんメニューをください'},
+  {id:'osusume', kana:'おすすめ', romaji:'osusume',   en:'recommendation', pos:'noun',         band:2,
+    mora:[['お','o'],['す','su'],['す','su'],['め','me']],
+    phrase:['','おすすめ','はなんですか'], phraseEn:'What do you recommend?',
+    phraseRomaji:'osusume wa nan desu ka', phraseKanji:'お勧めは何ですか'},
+  {id:'chuumon', kana:'ちゅうもん',romaji:'chūmon',    en:'an order',       pos:'noun / verb',  band:3,
+    mora:[['ちゅ','chu'],['う','u'],['も','mo'],['ん','n']],
+    phrase:['これを ','ちゅうもん','します'], phraseEn:"I'll order this.",
+    phraseRomaji:'kore o chūmon shimasu', phraseKanji:'これを注文します'}
+];
+const byId = id => WORDS.find(w=>w.id===id);
+const BANDS = {1:'Simple',2:'Building',3:'Complex'};
+
+/* lifecycle: new | familiar | locked  — seeded so every screen has content */
+const STATUS = {sushi:'locked', ocha:'familiar', oishii:'familiar',
+                sumimasen:'new', osusume:'new', chuumon:'new'};
+
+const state = {surface:'web', introWord:null, introStep:0, drill:null, structDone:false,
+               scaffold:'a'};   /* §4.1 beginner script scaffold: a | b | c */
+
+/* ---------- surface + screen switching ---------- */
+function setSurface(s){
+  state.surface=s;
+  webDevice.classList.toggle('on',s==='web');
+  mobileDevice.classList.toggle('on',s==='mobile');
+  tgWeb.classList.toggle('on',s==='web');
+  tgMob.classList.toggle('on',s==='mobile');
+}
+function showWeb(id){
+  document.querySelectorAll('#webDevice .screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('w-'+id).classList.add('active');
+}
+function showMobile(id){
+  document.querySelectorAll('#mobileDevice .screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('m-'+id).classList.add('active');
+  if(id==='detail') renderDetail();
+  if(id==='proficiency') renderProficiency();
+}
+
+/* ---------- WEB: new taxonomy ---------- */
+function fillTopic(t){ topicInput.value=t; }
+function generateTaxonomy(){
+  const area=document.getElementById('genArea');
+  area.innerHTML='<div class="gen-row"><span class="spinner"></span>'+
+    'Building a complete vocabulary, contextual phrases and shared media…</div>';
+  setTimeout(()=>{
+    let html='<hr class="hr" style="margin:8px 0 4px;">'+
+      '<div style="font-size:11.5px;color:var(--ink-soft);margin:10px 0;">'+
+      'Generated · ordered simple → complex. Media is generated once and shared with every learner.</div>';
+    [1,2,3].forEach(b=>{
+      html+='<div class="band-label">Band '+b+' · '+BANDS[b]+'</div>';
+      WORDS.filter(w=>w.band===b).forEach(w=>{
+          html+='<div class="wordrow" onclick="openRecordFrom(\'new\',\''+w.id+'\')">'+
+            '<span class="kana">'+w.kana+'</span>'+
+            '<span class="en">'+w.en+'</span>'+
+            '<span class="pos">'+w.pos+'</span></div>';
+        });
+    });
+    html+='<button class="btn btn-primary" style="margin-top:18px;width:100%;" '+
+      'onclick="setSurface(\'mobile\');showMobile(\'home\');">'+
+      'Published — now learn it on mobile →</button>';
+    area.innerHTML=html;
+  },1700);
+}
+function openRecordFrom(origin, wordId){
+  recBack.textContent = origin==='new' ? '← generated list' : '← Topics';
+  recBack.setAttribute('onclick',"showWeb('"+origin+"')");
+  // if a word id is provided, render its canonical record into the web body
+  if(wordId){
+    const w = byId(wordId);
+    const body = document.querySelector('#w-record .web-body');
+    const senses = w.en ? '<div class="line">1 · '+w.en+'</div>' : '';
+    const kanjiLine = w.phraseKanji ? '<div class="line"><span class="g">kanji</span> &nbsp;<span class="jp">'+w.phraseKanji+'</span></div>' : '';
+    const kanaLine = '<div class="line"><span class="g">kana</span> &nbsp;<span class="jp">'+w.kana+'</span></div>';
+    const gram = '<div class="line"><span class="g">example</span> &nbsp;<span class="jp">'+(w.phrase.join('')||'')+'</span></div>';
+    let html = ''+
+      '<div class="rec-hero">'+
+        '<div class="rec-glyph jp">'+(w.kana||w.id)+'</div>'+
+        '<div>'+
+          '<div class="romaji">'+(w.romaji||'')+'</div>'+
+          '<div style="font-size:13px;color:var(--ink-soft);margin-top:3px;">'+(w.pos||'')+' · <span class="jp">'+(w.kana||'')+'</span></div>'+
+          '<div style="margin-top:9px;">'+
+            '<span class="pill pill-paper">in: '+(origin==='new'?'Generated topic':origin)+'</span>'+
+            '<span class="pill pill-paper" style="margin-left:4px;">band '+(w.band||'')+'</span>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="font-size:11.5px;color:var(--ink-soft);margin-bottom:12px;line-height:1.5;">'+
+        'One canonical record — never duplicated. Meaning is carried by context, grammar by examples, media by the word↔topic link.'+
+      '</div>'+
+      '<div class="rec-grid">'+
+        '<div class="rec-box">'+
+          '<h5>Senses</h5>'+senses+
+        '</div>'+
+        '<div class="rec-box">'+
+          '<h5>Script forms</h5>'+kanjiLine+kanaLine+
+          '<div class="line" style="font-size:11px;color:var(--ink-faint);">kanji hidden from learner until kana mastered</div>'+
+        '</div>'+
+        '<div class="rec-box">'+
+          '<h5>Grammatical forms</h5>'+gram+
+        '</div>'+
+        '<div class="rec-box">'+
+          '<h5>Example sentences</h5>'+
+          '<div class="line"><span class="jp">'+(w.phrase.join('')||'')+'</span></div>'+
+          '<div class="line g" style="font-size:11px;">'+(w.phraseEn||'')+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="rec-box" style="margin-top:13px;">'+
+        '<h5>Word ↔ topic media — generated once, shared by every learner</h5>'+
+        '<div class="media-slot"><span class="ic">▦</span> contextual image'+
+          '<span class="pill pill-good" style="margin-left:auto;">cached · shared</span></div>'+
+        '<div class="media-slot"><span class="ic jp">あ</span> contextual phrase'+
+          '<span class="pill pill-good" style="margin-left:auto;">cached · shared</span></div>'+
+        '<div class="media-slot"><span class="ic">▶</span> video · word in the topic'+
+          '<span class="pill pill-good" style="margin-left:auto;">cached · shared</span></div>'+
+        '<div class="media-slot"><span class="ic">▶</span> video · word in use'+
+          '<span class="pill pill-good" style="margin-left:auto;">cached · shared</span></div>'+
+        '<div class="media-slot"><span class="ic">♪</span> audio'+
+          '<span class="pill pill-good" style="margin-left:auto;">cached · shared</span></div>'+
+      '</div>';
+    body.innerHTML = html;
+  }
+  showWeb('record');
+}
+
+function openTopic(topicName){
+  // simple mapping: show all WORDS for Ordering Sushi, otherwise show same list (mock)
+  const host = document.getElementById('topicBody');
+  document.getElementById('topicTitle').textContent = topicName;
+  let html = '';
+  [1,2,3].forEach(b=>{
+    html += '<div class="band-label" style="margin-top:14px;">'+BANDS[b]+'</div>';
+    WORDS.filter(w=>w.band===b).forEach(w=>{
+      html += '<div class="wordrow" onclick="openRecordFrom(\''+topicName+'\',\''+w.id+'\')">'+
+        '<span class="kana">'+w.kana+'</span>'+
+        '<span class="en">'+w.en+'</span>'+
+        '<span class="pos">'+w.pos+'</span></div>';
+    });
+  });
+  host.innerHTML = html;
+  showWeb('topic');
+}
+
+/* ---------- MOBILE: detail list ---------- */
+function statusDot(st){
+  if(st==='locked') return '<span class="status-dot st-locked jp">済</span>';
+  if(st==='familiar') return '<span class="status-dot st-familiar"></span>';
+  return '<span class="status-dot st-new"></span>';
+}
+function renderDetail(){
+  const host=document.getElementById('detailList');
+  let html='';
+  [1,2,3].forEach(b=>{
+    html+='<div class="band-label" style="margin-top:14px;">'+BANDS[b]+'</div>';
+    WORDS.filter(w=>w.band===b).forEach(w=>{
+      const st=STATUS[w.id];
+      const label = st==='locked'?'locked':st==='familiar'?'familiar · drill it':'new · introduce';
+      html+='<div class="m-word" onclick="wordTap(\''+w.id+'\')">'+
+        statusDot(st)+
+        '<div class="kana jp">'+w.kana+'<div class="en" style="font-family:var(--f-ui);">'+
+        w.en+' · '+label+'</div></div></div>';
+    });
+  });
+  host.innerHTML=html;
+  syncMastery();
+}
+function wordTap(id){
+  const st=STATUS[id];
+  if(st==='new'){ startIntroduce(id); }
+  else if(st==='familiar'){ startDrill(); }
+  else { toast('Already locked — it\'s in the spaced queue'); }
+}
+
+/* ---------- mastery / proficiency ---------- */
+function mastery(){
+  const locked=WORDS.filter(w=>STATUS[w.id]==='locked').length;
+  return Math.round(locked/WORDS.length*100);
+}
+function syncMastery(){
+  const p=mastery();
+  ['taxPct','detailPct'].forEach(i=>{const e=document.getElementById(i); if(e)e.textContent=p+'%';});
+  ['taxBar'].forEach(i=>{const e=document.getElementById(i); if(e)e.style.width=p+'%';});
+}
+function renderProficiency(){
+  const p=mastery();
+  profNum.textContent=p+'%'; profBar.style.width=p+'%';
+  const locked=WORDS.filter(w=>STATUS[w.id]==='locked').map(w=>w.en);
+  profCando.innerHTML = locked.length
+    ? 'You can reliably use: <b>'+locked.join(', ')+'</b> — in context, ordering sushi.'
+    : 'No words locked yet — drill some to build your can-do list.';
+  jlptLvl.textContent = p>=80?'N5':'pre-N5';
+}
+
+/* ---------- INTRODUCE sequence ---------- */
+const STEPS=['the word','contextual image','contextual phrase','video · in the topic','video · word in use'];
+function startIntroduce(id){
+  state.introWord=id; state.introStep=0;
+  showMobile('introduce'); renderIntro();
+}
+function renderIntro(){
+  const w=byId(state.introWord), s=state.introStep;
+  let dots=''; STEPS.forEach((_,i)=>dots+='<i class="'+(i<=s?'on':'')+'"></i>');
+  introDots.innerHTML=dots;
+  const stage=document.getElementById('introStage');
+  let html='<div class="intro-step-name">'+STEPS[s]+'</div>';
+
+  if(s===1||s===2||s===4){
+    let chips='';
+    [['a','romaji'],['b','romaji + kana'],['c','kana only']].forEach(p=>{
+      chips+='<button class="sc-chip'+(state.scaffold===p[0]?' on':'')+'" '+
+        'onclick="setScaffold(\''+p[0]+'\')">'+p[1]+'</button>';
+    });
+    html+='<div class="sc-row">'+chips+'</div>';
+  }
+
+  if(s===0){
+    const sc=state.scaffold;
+    let chips='';
+    [['a','romaji'],['b','romaji + kana'],['c','kana only']].forEach(p=>{
+      chips+='<button class="sc-chip'+(sc===p[0]?' on':'')+'" '+
+        'onclick="setScaffold(\''+p[0]+'\')">'+p[1]+'</button>';
+    });
+    const moraRow='<div class="mora-row">'+w.mora.map(m=>
+      '<div class="mora"><span class="k jp">'+m[0]+'</span>'+
+      '<span class="r">'+m[1]+'</span></div>').join('')+'</div>';
+    let wb;
+    if(sc==='a'){
+      wb='<div class="intro-kana" style="font-family:var(--f-display);font-style:italic;">'+
+           w.romaji+'</div><div class="intro-en">'+w.en+'</div>';
+    } else if(sc==='b'){
+      wb=moraRow+'<div class="intro-en">'+w.en+'</div>';
+    } else {
+      wb='<div class="intro-kana jp">'+w.kana+'</div><div class="intro-en">'+w.en+'</div>';
+    }
+    const notes={
+      a:'Zero knowledge — romaji only, so the word is pronounceable before kana is learned.',
+      b:'Bridging — each kana sits directly above its sound, so the character attaches to the romaji.',
+      c:'Scaffold removed — kana alone. This is where a reader of kana starts.'};
+    html+='<div class="sc-row">'+chips+'</div>'+wb+
+      '<button class="audio-btn" onclick="speak(\''+w.kana+'\',this)">▶ &nbsp;hear it first</button>'+
+      '<div class="sc-note">'+notes[sc]+'<br><span style="color:var(--ink-faint);">'+
+      'Stage is normally set by kana mastery in the Structure track — the romaji stages drop away once you can read kana.</span></div>';
+    introNextBtn.textContent='Next →';
+  }
+  else if(s===1){
+    html+='<div class="ctx-art"><img src="data:image/svg+xml;utf8,'+ART[w.id]+'" alt=""></div>'+
+      '<div class="placeholder-tag">AI image · cached &amp; shared</div>'+
+      '<div class="predict-q">What do you think this means?</div>'+
+      '<div class="reveal-box" id="revealBox">'+
+        '<button class="btn btn-ghost" onclick="revealMeaning()">Reveal meaning</button></div>';
+    introNextBtn.textContent='Next →';
+  }
+  else if(s===2){
+    const ph=w.phrase, sc=state.scaffold;
+    const kanaP='<div class="ctx-phrase jp">'+ph[0]+'<b>'+ph[1]+'</b>'+ph[2]+'</div>';
+    const romaP='<div class="ctx-roma">'+
+      w.phraseRomaji.replace(w.romaji,'<b>'+w.romaji+'</b>')+'</div>';
+    const phraseBlock = sc==='a' ? romaP : sc==='b' ? (kanaP+romaP) : kanaP;
+    html+=phraseBlock+
+      '<div class="intro-en">'+w.phraseEn+'</div>'+
+      '<button class="audio-btn" onclick="speak(\''+ph.join('')+'\',this)">▶ &nbsp;hear the phrase</button>'+
+      '<div style="font-size:10.5px;color:var(--ink-faint);margin-top:14px;">the word has neighbours</div>';
+    introNextBtn.textContent='Next →';
+  }
+  else if(s===3){
+    html+='<div class="video-panel"><div class="play-tri"></div></div>'+
+      '<div class="placeholder-tag">video placeholder · 4–8 s clip</div>'+
+      '<div class="video-cap">the word as a situated event</div>';
+    introNextBtn.textContent='Next →';
+  }
+  else if(s===4){
+    const ph=w.phrase, sc=state.scaffold;
+    const shKana='<div class="shadow-phrase jp">'+ph[0]+'<b>'+ph[1]+'</b>'+ph[2]+'</div>';
+    const shRoma='<div class="shadow-roma">'+
+      w.phraseRomaji.replace(w.romaji,'<b>'+w.romaji+'</b>')+'</div>';
+    const shPhrase = sc==='a' ? shRoma : sc==='b' ? (shKana+shRoma) : shKana;
+    html+='<div class="use-block">'+
+        '<div class="use-video"><div class="play-tri"></div>'+
+          '<span class="use-tag">video · word in use</span></div>'+
+        '<div class="shadow-card">'+
+          '<div class="shadow-lbl">Your turn — say what they said</div>'+
+          shPhrase+
+          '<div class="shadow-en">'+w.phraseEn+'</div>'+
+          '<div class="shadow-actions">'+
+            '<button class="btn btn-ghost" onclick="speak(\''+ph.join('')+'\',this)">▶ hear it</button>'+
+            '<button class="audio-btn" onclick="speakCheck(this)">🎤 speak it</button>'+
+          '</div>'+
+          '<div class="shadow-result"></div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="placeholder-tag" style="margin-top:10px;">placeholder video · '+
+        'speech is scored live (Chrome / Edge)</div>';
+    introNextBtn.textContent='Check what you\'ve learned →';
+  }
+  stage.innerHTML=html;
+}
+function revealMeaning(){
+  const w=byId(state.introWord), sc=state.scaffold;
+  let wb;
+  if(sc==='a'){
+    wb='<div class="reveal-word" style="font-family:var(--f-display);font-style:italic;">'+
+       w.romaji+'</div>';
+  } else if(sc==='b'){
+    wb='<div class="mora-row">'+w.mora.map(m=>
+       '<div class="mora"><span class="k jp">'+m[0]+'</span>'+
+       '<span class="r">'+m[1]+'</span></div>').join('')+'</div>';
+  } else {
+    wb='<div class="reveal-word jp">'+w.kana+'</div>';
+  }
+  document.getElementById('revealBox').innerHTML=wb+
+    '<div class="reveal-en">'+w.en+'</div>';
+}
+function setScaffold(stage){ state.scaffold=stage; renderIntro(); }
+function introNext(){
+  if(state.introStep<4){ state.introStep++; renderIntro(); }
+  else { startCheck(); }
+}
+
+/* ---------- FAMILIARITY check — 'familiar' is earned by a test, not self-granted ---------- */
+function startCheck(){
+  state.check={wordId:state.introWord, q:0};
+  showMobile('check'); renderCheck();
+}
+function renderCheck(){
+  const c=state.check, w=byId(c.wordId);
+  const host=document.getElementById('checkStage');
+  if(c.q>=2){
+    STATUS[c.wordId]='familiar';
+    host.innerHTML='<div class="drill-card" style="padding:36px 20px;">'+
+      '<div style="font-family:var(--f-jp);font-size:38px;color:var(--good);">✓</div>'+
+      '<div class="h-disp" style="font-size:19px;margin-top:8px;">Familiar</div>'+
+      '<div style="font-size:12px;color:var(--ink-soft);margin-top:6px;">“'+w.en+
+      '” passed the check — it can now enter the drill loop.</div></div>'+
+      '<button class="btn btn-primary" style="width:100%;" '+
+      'onclick="showMobile(\'detail\')">Back to topic →</button>';
+    return;
+  }
+  const dir=c.q===0?'jp2en':'en2jp';
+  const others=WORDS.filter(x=>x.id!==w.id).sort(()=>Math.random()-.5).slice(0,3);
+  const opts=[w,...others].sort(()=>Math.random()-.5);
+  let h='<div style="font-size:11px;color:var(--ink-soft);text-align:center;'+
+        'margin-bottom:10px;font-weight:600;">Question '+(c.q+1)+' of 2</div>'+
+        '<div class="drill-card">';
+  if(dir==='jp2en'){
+    h+='<div class="drill-dir">日本語 → English · which meaning?</div>'+
+       '<div class="drill-prompt jp">'+w.kana+'</div></div><div class="drill-opts">';
+    opts.forEach(o=>h+='<button class="opt" onclick="checkAnswer(this,'+(o.id===w.id)+')">'+o.en+'</button>');
+  } else {
+    h+='<div class="drill-dir">English → 日本語 · which word?</div>'+
+       '<div class="drill-prompt en">'+w.en+'</div></div><div class="drill-opts">';
+    opts.forEach(o=>h+='<button class="opt" onclick="checkAnswer(this,'+(o.id===w.id)+')">'+
+      '<span class="jp">'+o.kana+'</span></button>');
+  }
+  host.innerHTML=h+'</div>';
+}
+function checkAnswer(btn,correct){
+  const w=byId(state.check.wordId);
+  document.querySelectorAll('#checkStage .opt').forEach(o=>{
+    o.setAttribute('onclick',''); o.classList.add('dim');
+  });
+  btn.classList.remove('dim'); btn.classList.add(correct?'correct':'wrong');
+  if(correct){
+    state.check.q++;
+    setTimeout(renderCheck,640);
+  } else {
+    document.querySelectorAll('#checkStage .opt').forEach(o=>{
+      const t=o.textContent.trim();
+      if(t===w.en||t===w.kana){ o.classList.remove('dim'); o.classList.add('correct'); }
+    });
+    toast('Not yet — that one needs another look');
+    setTimeout(renderCheck,1300);
+  }
+}
+
+/* ---------- DRILL loop ---------- */
+function startDrill(){
+  const ready=WORDS.filter(w=>STATUS[w.id]==='familiar').map(w=>w.id);
+  if(ready.length===0){ toast('No familiar words yet — introduce one first'); return; }
+  state.drill={queue:[...ready], correct:{}, lockedThisRun:0};
+  showMobile('drill'); renderDrillCard();
+}
+function renderDrillCard(){
+  const d=state.drill, stage=document.getElementById('drillStage');
+  drillCount.textContent='queue '+d.queue.length+' · locked '+d.lockedThisRun;
+  if(d.queue.length===0){
+    stage.innerHTML='<div class="drill-card" style="padding:40px 20px;">'+
+      '<div style="font-family:var(--f-jp);font-size:40px;color:var(--shu);">完</div>'+
+      '<div class="h-disp" style="font-size:20px;margin-top:8px;">Session complete</div>'+
+      '<div style="font-size:12.5px;color:var(--ink-soft);margin-top:6px;">'+
+      d.lockedThisRun+' word'+(d.lockedThisRun===1?'':'s')+' locked into the spaced queue.</div></div>'+
+      '<button class="btn btn-primary" style="width:100%;" onclick="showMobile(\'proficiency\')">'+
+      'See proficiency →</button>'+
+      '<button class="btn btn-ghost" style="width:100%;margin-top:8px;" '+
+      'onclick="showMobile(\'detail\')">Back to topic</button>';
+    return;
+  }
+  const id=d.queue[0], w=byId(id);
+  const dir = Math.random()<0.5?'jp2en':'en2jp';
+  d.dir=dir; d.cur=id;
+  const others=WORDS.filter(x=>x.id!==id).sort(()=>Math.random()-.5).slice(0,3);
+  const opts=[w,...others].sort(()=>Math.random()-.5);
+
+  let html='<div class="drill-card">';
+  if(dir==='jp2en'){
+    html+='<div class="drill-dir">日本語 → English</div>'+
+      '<div class="drill-prompt jp">'+w.kana+'</div></div>';
+    html+='<div class="drill-opts">';
+    opts.forEach(o=>html+='<button class="opt" onclick="drillAnswer(this,'+(o.id===id)+')">'+o.en+'</button>');
+  } else {
+    html+='<div class="drill-dir">English → 日本語</div>'+
+      '<div class="drill-prompt en">'+w.en+'</div></div>';
+    html+='<div class="drill-opts">';
+    opts.forEach(o=>html+='<button class="opt" onclick="drillAnswer(this,'+(o.id===id)+')">'+
+      '<span class="jp">'+o.kana+'</span></button>');
+  }
+  html+='</div>';
+  stage.innerHTML=html;
+}
+function drillAnswer(btn,correct){
+  const d=state.drill, id=d.cur;
+  document.querySelectorAll('#drillStage .opt').forEach(o=>{
+    o.setAttribute('onclick',''); o.classList.add('dim');
+  });
+  btn.classList.remove('dim');
+  btn.classList.add(correct?'correct':'wrong');
+
+  if(correct){
+    d.correct[id]=(d.correct[id]||0)+1;
+    d.queue.shift();
+    if(d.correct[id]>=2){
+      STATUS[id]='locked'; d.lockedThisRun++;
+      fireStamp(byId(id).kana[0]);
+      setTimeout(()=>{renderDrillCard();},1600);
+      return;
+    } else {
+      d.queue.push(id);              // needs one more correct
+    }
+  } else {
+    document.querySelectorAll('#drillStage .opt').forEach(o=>{ /* show nothing extra */ });
+    d.queue.push(d.queue.shift());   // missed — back of the queue
+  }
+  setTimeout(()=>{renderDrillCard();},correct?620:780);
+}
+function fireStamp(ch){
+  const v=document.querySelector('#mobileDevice .viewport');
+  const s=document.createElement('div');
+  s.className='stamp';
+  s.innerHTML='<div class="seal jp">'+ch+'</div>';
+  v.appendChild(s);
+  requestAnimationFrame(()=>s.classList.add('fire'));
+  toast('locked — into the spaced-repetition queue');
+  setTimeout(()=>s.remove(),1700);
+}
+
+/* ---------- structure mini-drill ---------- */
+function structDrill(){
+  const host=document.getElementById('structBody');
+  if(state.structDone){ host.scrollTop=0; }
+  host.innerHTML=
+    '<span class="back" onclick="showMobile(\'structure\')">← Structure</span>'+
+    '<div class="eyebrow shu" style="margin:10px 0 0;">Hiragana · recognition</div>'+
+    '<div class="drill-card" style="margin-top:12px;">'+
+      '<div class="drill-dir">which sound?</div>'+
+      '<div class="drill-prompt jp">か</div></div>'+
+    '<div class="drill-opts" id="structOpts">'+
+      ['ka','sa','ta','na'].sort(()=>Math.random()-.5).map(o=>
+        '<button class="opt" onclick="structAns(this,'+(o==='ka')+')">'+o+'</button>').join('')+
+    '</div>'+
+    '<div class="parallel-note" style="margin-top:14px;">Same drill loop as the topic track — '+
+    'just a different compartment.</div>';
+}
+function structAns(btn,ok){
+  document.querySelectorAll('#structOpts .opt').forEach(o=>{o.setAttribute('onclick','');o.classList.add('dim');});
+  btn.classList.remove('dim'); btn.classList.add(ok?'correct':'wrong');
+  if(ok){ state.structDone=true; toast('か = ka · structure builds in parallel'); }
+}
+
+/* ---------- helpers ---------- */
+let toastT;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2400);
+}
+function speak(text,btn){
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='ja-JP'; u.rate=.85;
+    if(btn){ btn.classList.add('playing');
+      u.onend=()=>btn.classList.remove('playing'); }
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+function speakCheck(btn){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const card=btn.closest('.shadow-card');
+  const out=card.querySelector('.shadow-result');
+  if(!SR){
+    out.innerHTML='<span class="sr-warn">Speech scoring needs Chrome or Edge — '+
+      "this browser doesn't support the Web Speech API.</span>";
+    return;
+  }
+  const w=byId(state.introWord);
+  const targets=[w.phrase.join(''), w.phraseKanji||''];
+  const rec=new SR();
+  rec.lang='ja-JP'; rec.interimResults=false; rec.maxAlternatives=4;
+  btn.setAttribute('onclick',''); btn.textContent='● listening…';
+  btn.style.background='var(--ink-soft)';
+  out.innerHTML='<span class="sr-heard">listening — say the phrase now…</span>';
+  let got=false;
+  rec.onresult=(e)=>{
+    got=true;
+    const res=e.results[0]; let best=0, heard=res[0]?res[0].transcript:'';
+    for(let i=0;i<res.length;i++){
+      const t=res[i].transcript;
+      const sc=Math.max.apply(null,targets.map(tg=>similarity(norm(t),norm(tg))));
+      if(sc>best){ best=sc; heard=t; }
+    }
+    showScore(out,btn,Math.round(best*100),heard);
+  };
+  rec.onerror=(e)=>{
+    got=true;
+    out.innerHTML='<span class="sr-warn">'+
+      ((e.error==='not-allowed'||e.error==='service-not-allowed')
+        ? 'Microphone blocked — allow mic access for this page, then retry.'
+        : e.error==='no-speech' ? "Didn't catch anything — tap and try again."
+        : 'Speech scoring could not run here ('+e.error+').')+'</span>';
+    resetSpeakBtn(btn);
+  };
+  rec.onend=()=>{ if(!got){
+    out.innerHTML='<span class="sr-warn">No speech detected — try again.</span>';
+    resetSpeakBtn(btn); } };
+  try{ rec.start(); }
+  catch(err){
+    out.innerHTML='<span class="sr-warn">Speech scoring is unavailable in this context — '+
+      'open the page directly in Chrome or Edge.</span>';
+    resetSpeakBtn(btn);
+  }
+}
+function resetSpeakBtn(btn){
+  btn.textContent='🎤 try again'; btn.style.background='';
+  btn.setAttribute('onclick','speakCheck(this)');
+}
+function showScore(out,btn,score,heard){
+  const v = score>=85 ? ['great match','var(--good)']
+          : score>=60 ? ['close — keep practising','var(--shu-deep)']
+          : ['not quite — try again','var(--shu)'];
+  out.innerHTML=
+    '<div class="sr-score" style="color:'+v[1]+';">'+score+'%</div>'+
+    '<div class="sr-verdict" style="color:'+v[1]+';">'+v[0]+'</div>'+
+    '<div class="sr-heard">we heard <span class="jp">「'+(heard||'—')+'」</span></div>';
+  resetSpeakBtn(btn);
+}
+function norm(s){ return (s||'').replace(/[\s、。，．,.!?！？・「」]/g,''); }
+function similarity(a,b){
+  if(!a||!b) return 0;
+  return 1 - lev(a,b)/Math.max(a.length,b.length);
+}
+function lev(a,b){
+  const m=a.length, n=b.length;
+  const dp=[]; for(let i=0;i<=m;i++) dp.push([i]);
+  for(let j=0;j<=n;j++) dp[0][j]=j;
+  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++){
+    dp[i][j]=Math.min(dp[i-1][j]+1, dp[i][j-1]+1,
+      dp[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  }
+  return dp[m][n];
+}
+
+/* init */
+renderDetail();
+</script>
+</body>
+</html>
