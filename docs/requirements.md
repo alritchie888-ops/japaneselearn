@@ -1,6 +1,6 @@
 # Japanese Learning App — MVP Requirements Specification
 
-*Status: requirements phase. Major revision incorporating the adaptive learning-engine model worked out in design discussion. This document is the agreed reference.*
+*Status: requirements phase. Incorporates the adaptive learning-engine model and the checklist / chat UX model. This document is the agreed reference.*
 
 ---
 
@@ -48,7 +48,7 @@ These govern every decision below. Where a later requirement and a principle con
 
 **3.2 Learning direction:** EN→JP is the production-heavy direction; JP→EN is the recognition direction. **Testing is bilateral** — the learner is prompted in both directions. This is required: test one direction only and the learner is merely translating the prompt in front of them. The two directions are separate skills, tracked separately (see §13).
 
-**3.3 Platform:** Web application delivered as a **PWA** — one codebase, runs in the browser, installable on phone and desktop, no app store. Two surfaces: the laptop/web surface for **authoring** content; the mobile surface for **learning**. The fast drill loop works offline; media generation, scenario generation, and first-introduction require a network connection.
+**3.3 Platform and surfaces.** Web application delivered as a **PWA** — one codebase, runs in the browser, installable, no app store. The laptop/web surface leans to authoring, the mobile surface to learning, but the line is soft: the entry point on both is a natural-language **chat intent surface** (§11). A learner request for a topic that does not yet exist triggers authoring of it — demand creates content (§6.6). The fast drill loop works offline; media generation, scenario generation, and first-introduction require a network connection.
 
 **3.4 Explicitly out of scope:** Handwriting kanji. Production is typing / selecting / speaking only.
 
@@ -70,7 +70,7 @@ Each step is a renderable form; there is no continuous in-between. Rendering is 
 
 - Each word, for each learner, in each test direction, holds a scaffold state — a position on the ladder.
 - When a word is failed, that word's rendering drops one step toward more support — quietly, that word only. Nothing global moves; "yanking the learner down" is structurally impossible, because there is no global position to move.
-- When a word is proven (see §8.3), its rendering rises one step toward less support.
+- When a word is proven (see §8.4), its rendering rises one step toward less support.
 - The scaffold therefore breathes both ways, per word, on demonstrated capability.
 
 **4.3 Recognition vs production.** The same scaffold state is used as a mirror:
@@ -80,7 +80,7 @@ Each step is a renderable form; there is no continuous in-between. Rendering is 
 
 Recognition scaffold normally runs ahead of production, because reading a kanji is easier than producing one.
 
-**4.4 The reveal is the diagnosis.** When a word is failed and its support is revealed, that reveal is also the diagnostic probe. If the support rescues the next attempt, the failure was script-reading. If it does not, the failure is a vocabulary gap, and the word routes back to familiarisation (§8.1).
+**4.4 The reveal is the diagnosis.** When a word is failed and its support is revealed, that reveal is also the diagnostic probe. If the support rescues the next attempt, the failure was script-reading. If it does not, the failure is a vocabulary gap, and the word routes back to familiarisation (§8.2).
 
 **4.5 Kanji.** Kanji is not hard-gated. There is no separate "kanji-unlock" event — kanji surfaces through the ordinary per-word scaffold as words prove out, supported by furigana that fades word by word. For a beginner whose scaffolds sit low, kanji is simply not reached yet. The JLPT per-band reference lists (N5 ~100, N4 ~300 cumulative, N3 ~650, N2 ~1,000, N1 ~2,000+) remain the difficulty calibration (see §14).
 
@@ -104,7 +104,7 @@ The substrate must genuinely *catch up*, or topic mastery does not generalise. C
 
 ---
 
-## 6. Content Model: One Unit Type, Four Learning Patterns
+## 6. Content Model: Units, Hierarchy, and Four Learning Patterns
 
 **6.1 Everything is a can-do unit.** Topics and structure sets are the *same object*: a **unit** — a "learn to ___" can-do with its own levels and its own mastery %. "Order coffee," "count," "read hiragana," "negate verbs" are all units. There is no category split in the data model or the engine; one engine runs every unit.
 
@@ -122,7 +122,13 @@ A unit carries two pieces of metadata:
 
 The learning-pattern split is orthogonal to the topic/structure split — the old "systematic sets" category alone spans patterns A, B, and C. The engine is one mechanism; the pattern is a template plugged into it per unit.
 
-**6.3 A unit's levels.** Every unit progresses simple → complex. For Pattern D (topics) the levels are deeper vocabulary and harder, more natural scenarios. For Patterns B and C the levels are the rule first, then exception clusters layered on. Levels are *content* levels — the i+1 progression of the material — never *learner* labels.
+**6.3 Topic hierarchy: parent → chapter → content.** A topic nests three levels: a **parent taxonomy** (the domain / container — "café"; a grouping, its mastery the aggregate of its chapters); a **sub-topic = chapter** (barista talk, coffee machine, point of sale — the *working unit*: its own situation, word set, and topic scale); and **content** (the words, phrases, and scenarios inside a chapter). A chapter is *relatively contained* — masterable on its own — but not sealed: chapters under one parent share a world and share vocabulary (one canonical word record, §7, linked to multiple chapters), so later chapters in a parent are cheaper.
+
+**6.4 A chapter is a situation.** A chapter is modelled as a real situation — not a word list. The vocabulary, phrases, structure, and scenarios are *decomposed from* the situation, so the set is cohesive and complete by construction. An author may instead *assemble* a word set directly — simpler — but it still needs completeness for the can-do and **relationship tags** (each word's role within the chapter), or the engine cannot weave it (§9).
+
+**6.5 Growth — vertical and horizontal.** A chapter refines **vertically** — the same situation rendered at rising naturalness (§7.3); progress within a chapter is the same chapter told from baby-simple to native. The parent grows **horizontally** — new chapters added under it. Levels are *content* levels — the i+1 progression of the material — never *learner* labels.
+
+**6.6 Emergent organisation.** The author never organises the taxonomy. They seed one rough idea and label; the system clusters, parents, splits over-large chapters, and relabels as content accumulates — automatically. The seed label is a temporary anchor, itself revised as the topic grows. This is safe because learner progress sits on canonical word records (§7), not on labels or groupings.
 
 ---
 
@@ -136,6 +142,7 @@ The learning-pattern split is orthogonal to the topic/structure split — the ol
 - grammatical forms (positive, negative, conventional uses) — shown through example sentences, not abstract rules
 - example sentences
 - unit links (which units the word belongs to)
+- relationship tags — the word's role within a chapter (drink / size / modifier / transaction / register), used by the engine to weave coherent scenarios (§9)
 - complexity level
 - first-contact drill count
 
@@ -148,7 +155,7 @@ The learning-pattern split is orthogonal to the topic/structure split — the ol
 **7.5 The user profile.** Each user has a private, persistent **profile** that develops with use ("memory"):
 
 - per-word, per-direction scaffold state and spaced-repetition state
-- per-unit mastery
+- per-unit mastery, and checklist position within each chapter (§8, §11)
 - the script intention set at onboarding (§10.1)
 - adopted units
 
@@ -163,29 +170,25 @@ The governing line: **shared content, private progress.**
 
 ---
 
-## 8. Learning Flow: Familiarity → Fluency
+## 8. Learning Flow: The Chapter Lifecycle
 
-A word — and a unit — moves from **familiarity** to **fluency**. These are not gated sequential stages with a binary "locked" checkpoint between them; the earlier three-stage "familiarise / lock-in / retain" model is replaced. Familiarity and fluency overlap, and the mix shifts continuously.
+A learner moves through a chapter — and beyond it — in connected stages. Three things connect every stage: the **checklist** (the visible spine — the ordered steps of the chapter, done / not-done; §11), the **engine** (sequences what comes next; §9), and the **profile** (holds continuity across every absence; §7.5).
 
-**8.1 Familiarity — the first encounter.** Word-level. The first time a word is met, presented within its unit, in sequence:
+**8.1 Intent → Familiarisation.** The learner states intent in the chat surface ("study barista talk today"). The system finds or builds the chapter; its new words become the first checklist items.
 
-1. **The word** — audio first. The learner *hears* the word before seeing it written. The written form follows the per-word scaffold (§4).
-2. **Contextual image** — the meaning anchor.
-3. **Contextual phrase** — the word in a minimal frame.
-4. **Video — the word in the topic** — the word as a situated event.
-5. **Video — the word in use** — a person using the word naturally.
+**8.2 Familiarisation — the first encounter.** Word-level. The first time a word is met, presented within its chapter, in sequence: the word (audio first — heard before seen; written form per the §4 scaffold); contextual image; contextual phrase; the "word in the topic" and "word in use" videos. One active **predict beat** — before the meaning is revealed, a one-tap "what do you think this means?" A word the learner already knows is detected on entry and skips familiarisation.
 
-One active **"predict" beat** is included — after the image, before the meaning is revealed, a one-tap "what do you think this means?"
+**8.3 Repetition.** Familiarity is built by **rapid repetition** — short, fast drill bursts. Rapid repetition produces familiarity, not knowledge: success in massed repetition proves only that the word is in working memory. A familiarised word enters the SRS rotation — familiarity gates drilling (an unmet word cannot be drilled).
 
-Familiarity is then built by **rapid repetition** — short, fast drill bursts. Rapid repetition produces familiarity, not knowledge: success in massed repetition proves only that the word is in working memory (see §8.3).
+**8.4 Fluency, and proof of ability.** Knowledge is fluency, and fluency is a property of the *chapter*, not the isolated word. It is built and proven through **AI-generated scenarios** — the words used, varied, and recombined across situations of rising naturalness; scenario variety delivers spaced retrieval, interleaving, and comprehensible input (i+1) at once. A chapter is **fluent** when the learner clears **fresh, unseen scenarios** at the target naturalness, unscaffolded.
 
-**8.2 Fluency — the topic-level achievement.** Knowledge is fluency, and fluency is a property of the *topic*, not the isolated word. Fluency is built and proven through **AI-generated scenarios**: the words are used, varied, and recombined across many situations of increasing naturalness. Scenario variety simultaneously delivers spaced retrieval, interleaving, and comprehensible input (i+1).
+Proof: success in *massed* repetition proves familiarity; success in *spaced and varied* repetition — after a gap, in a form not just seen — proves **ability**. The engine weights proof by the gap and acts only on proven ability.
 
-A unit is **fluent** when the learner clears **fresh, unseen scenarios** at the target naturalness level, unscaffolded.
+**8.5 Leaving and returning.** State lives in the profile + SRS, not the session. Leaving mid-chapter is non-destructive — the checklist freezes where the learner stopped. On return, SRS decay plus the profile tell the engine exactly what is due; the checklist is the visible resume point, and the engine front-loads weak and due items. A long absence must re-enter as *refresh*, not *restart* (see Appendix).
 
-**8.3 Proof of ability.** Success in *immediate / massed* repetition proves **familiarity** — the word is in working memory now. Success in *spaced and varied* repetition — after a gap, in a form not just seen — proves **ability**. The engine weights proof by the gap: a correct answer straight after exposure barely moves the model; a correct answer after a long gap moves it a lot. The adaptive ramp acts on proven ability, never on massed-repetition success.
+**8.6 Expanding.** When a chapter's checklist completes (100%), the topic expands: a new chapter is added under the parent (inheriting shared vocabulary, §6.3), or the same chapter is re-entered at a higher naturalness (§6.5). As chapters accumulate, the learner's unit of attention pivots from the chapter level to the topic level (§14).
 
-**8.4 The familiarity↔fluency mix.** A learner does not finish all familiarity before any fluency. A scenario with three familiar words is already worth doing. Early: mostly rapid repetition plus a few simple scenarios. Later: mostly scenarios, with repetition only for freshly introduced vocabulary. The mix shifts continuously; there is no boundary event.
+**8.7 Familiarity and fluency overlap.** A learner does not finish all familiarisation before any fluency. A scenario with three familiar words is already worth doing. Early: mostly rapid repetition plus a few simple scenarios. Later: mostly scenarios. The mix shifts continuously; there is no boundary event.
 
 ---
 
@@ -200,7 +203,7 @@ The engine spots weakness and drives what the learner sees next. It is **roughly
 
 **9.2 Generation and open-ended scoring — the LLM.** The LLM does the three jobs nothing else can: generate scenarios, phrases, and probe items; score open-ended production (is this spoken or typed answer natural); write the pattern diagnosis in human terms.
 
-**9.3 What the engine serves.** It schedules **scenarios**, not flashcards: the scheduler picks the weak and due words, the generator weaves a fresh scenario around them at the learner's i+1 naturalness. It balances three pools every session — **new** (introduce), **weak** (remediate), **due** (maintain) — and controls intake pace: struggling → slow new words; cruising → accelerate.
+**9.3 What the engine serves.** It schedules **scenarios**, not flashcards. The scheduler does not pick raw "most due" — it picks a cluster of words that is *mostly due and also related* (via relationship tags, §7.1), and the generator weaves one coherent scenario around them at the learner's i+1 naturalness; coherence is a constraint on selection. It balances three pools every session — **new** (introduce), **weak** (remediate), **due** (maintain) — and controls intake pace: struggling → slow new words; cruising → accelerate.
 
 **9.4 Start simple; the ramp adapts.** Every learner starts simple. The engine reads ability from how fast the learner clears the simple material, and layers complexity just above current ability (i+1). The simple start *is* the assessment — there is no placement test, no onboarding probe, no shift. The ramp breathes both ways: cruising layers faster, struggling eases off.
 
@@ -214,27 +217,40 @@ The engine spots weakness and drives what the learner sees next. It is **roughly
 
 ## 10. The Learning Scale
 
-A single device — the **scale** — is the learner's whole interface. Everything in the model is a position on a scale; the learner learns one interface and reads "you are here" on whichever scale.
+A single device — the **scale** — is how the learner sees "where am I." Everything in the model is a position on a scale.
 
 **10.1 Onboarding — set once.** At the start the learner sets a slider — their **intention** — choosing where to enter the script ladder (romaji / kana / furigana / kanji). This is an *intention*, not a self-rating: it states what the learner *wants*, so no setting can be "wrong." It is a low-friction on-ramp, set one time. The choice is low-stakes because the engine corrects from reality regardless (§9.5); it is neither a placement test nor a ceiling. If skipped, it defaults to full support.
 
 **10.2 After onboarding — a display.** The slider's role then flips: the learner no longer sets it, they read it. It shows where they actually are as the system rebalances. Same device — input once, then display.
 
-**10.3 Two scale types.**
+**10.3 Scale and checklist are the same data.** A scale and a checklist are two views of one progress record: the **checklist** is the *itemised* view (the steps of a chapter, done / not-done — §11); the **scale** is the *aggregate* view (a percentage). A chapter at 60% is three of five checklist items complete.
 
-- **Topic scale** — many of them, one per unit. Scoped to a single can-do, 0→100%, bounded (100% = done). The learner *acts* on these. The **functional** readout.
-- **Proficiency scale** — one. The aggregate, mapped to the external standard (JLPT / CEFR-J). Derived, not acted on directly; it moves as a consequence of topic scales. A readout, not a target. The **standardised** readout.
+**10.4 Three tiers of aggregation.** Progress aggregates up three tiers:
 
-**10.4 Accountability.** The scale is the honest mirror: the learner set an intention, their own results moved the marker, and they can see it. It reads as position, never as a verdict.
+- **Chapter scale** — the working unit; the learner acts on it directly. The *functional* readout.
+- **Topic scale** — the parent taxonomy, an aggregate of its chapter scales. Derived, yet also actionable as a target ("finish the café topic").
+- **Proficiency scale** — the global aggregate, mapped to the external standard (JLPT / CEFR-J). Derived; a readout, not a target. The *standardised* readout.
+
+**10.5 Accountability.** The scale is the honest mirror: the learner set an intention, their own results moved the marker, and they can see it. It reads as position, never as a verdict.
 
 ---
 
-## 11. UI Modes
+## 11. The Interface: Checklist, Chat, and Episodes
 
-Two distinct modes resolve the tension between rich media and a fast, simple interface:
+The interface is a **blend** — chat-like features where they fit, dedicated surfaces where they do not. It has three parts.
 
-- **Introduce mode** — rich media, used once per word during familiarisation (§8.1). Short clips (4–8 seconds each), auto-advancing but always replayable and skippable. This is the only place richness is allowed.
-- **Drill mode** — stripped down, fast, tap- and keyboard-quick, no media. The everyday repeat loop; it must stay spreadsheet-simple.
+**11.1 The checklist — the spine.** A guided, ordered checklist is the learner's spine through a chapter: the steps of the situation (greet → order → specify → pay), done / not-done. It is guided — the engine sequences it (§9); the learner does not navigate a menu. It is the visible resume point on return (§8.5) and the itemised face of the scale (§10.3). It must read as a *process* checklist, not a flat to-do list — the items are the beats of one situation, which is what makes the chapter cohere.
+
+**11.2 The chat — the steering layer.** A natural-language input sits beside the checklist for *intent* ("study barista talk today"). It is a **form-stream with a natural-language input**, not a conversational chat — no voice, no chatter (§2.6). The text box steers; the body is structured forms. Intent may also be spoken (§12.2).
+
+**11.3 Episodes — pop-in intensive features.** From a checklist item the learner pops into an intensive episode and returns to the spine. Episode types:
+
+- **Introduce** — rich media, once per word during familiarisation; short clips (4–8s), auto-advancing, replayable, skippable.
+- **Drill** — stripped down, fast, tap- and keyboard-quick, no media. The bare repeat loop; it must stay spreadsheet-simple.
+- **Scenario** — media-rich but interactive and quick; a small visual situation (scene, characters, audio / video). Scene visuals reuse pinned topic assets (§7.4); only the dialogue is freshly generated.
+- **Voice capture** — spoken production via the voice-message pattern: hold-to-record, release, send; re-recordable, un-timed (§12.2).
+
+**11.4 The blend rule.** Chat-like features fit the *light, composed, self-paced* interactions — intent, a voice-message answer, a single scenario, a readout. Two heavyweight cases keep dedicated surfaces: the **fast drill** (bubbles and scrolling fight a spreadsheet-fast loop) and **immersive media** (a bubble shrinks full-screen Introduce clips). The learner pops in and out across that line; the pop must be frictionless (§2.3).
 
 ---
 
@@ -242,7 +258,7 @@ Two distinct modes resolve the tension between rich media and a fast, simple int
 
 **12.1 Typing.** Typing is a chosen production mode, kept deliberately despite dysgraphia — Japanese in real life is overwhelmingly typed, not handwritten. It is a **modest component, not the centrepiece**: visual learning and scenarios carry the load. Typing serves production drilling and, later, listen-and-type dictation. Within Japanese typing, the IME candidate-*selection* step is a recognition task; the romaji-spelling effort is kept gentle. **The grading engine measures knowledge, not keystrokes** — forgiving input matching, no time pressure on typed answers, and a self-grade override ("I knew that").
 
-**12.2 Speaking.** Speaking is **in scope** and is a **primary production mode** — an intact channel under the dysgraphia constraint. Spoken production with **compare-to-correct**: the learner speaks, the app captures the utterance and compares it against a correct reference. Implementation depth — recognition-match vs pronunciation/pitch-accent scoring — is deferred; the MVP may begin with recognition-match (see Appendix).
+**12.2 Speaking.** Speaking is **in scope** and is a **primary production mode** — an intact channel under the dysgraphia constraint. The capture UX is the **voice-message pattern** (§11.3): hold-to-record, release, send — familiar, re-recordable, with no live timer. The app's work sits on top: **compare-to-correct** against a reference. Implementation depth — recognition-match vs pronunciation/pitch-accent scoring — is deferred; the MVP may begin with recognition-match (see Appendix).
 
 ---
 
@@ -270,7 +286,7 @@ The app reports two readouts. They are **completely separate measurements** — 
 
 "Perfect at barista" and "beginner in Japanese" are both true at once, and not a contradiction. The two readouts are separate; the only thing they share is that a word is stored once (§7.1).
 
-**They correlate in aggregate.** One topic is small against the JLPT whole, but the *count* of units learned tracks proficiency upward. Structure units correlate directly and tightly — kana, numbers, grammar *are* the JLPT substrate. Topic units correlate indirectly, through the vocabulary they add and the structure they pull in (§5). Separate measurements; not uncorrelated.
+**They correlate in aggregate.** One chapter is a rounding error against the JLPT whole, but the *count* of units learned tracks proficiency upward. Structure units correlate directly and tightly — kana, numbers, grammar *are* the JLPT substrate. Topic units correlate indirectly, through the vocabulary they add and the structure they pull in (§5). The meaningful proficiency **lever** is whole-topic completion — every chapter under a parent — not a single chapter, which is why the learner's attention pivots chapter → topic as chapters accumulate (§8.6). Separate measurements; not uncorrelated.
 
 **Two segments.** The casual / holiday learner needs only the functional readout — a few topics; proficiency is irrelevant and never surfaced. The committed learner needs both. One engine serves the whole spectrum — three phrases for a trip, up to N1 — because the readouts are separate and neither is forced on anyone.
 
@@ -280,7 +296,7 @@ JLPT bands also serve as the **universal difficulty scale**, calibrating every u
 
 ## 15. MVP Summary — What v1 Is
 
-A web/PWA Japanese-learning app for English speakers, **outcome-based**: the learner declares a can-do they want, and the engine delivers it. Everything — topics and structure alike — is a can-do **unit** with its own mastery scale, run by **one adaptive engine** across four learning patterns. The learner sets a one-time script **intention**; from then the engine reads ability from success and failure, starts simple, layers complexity at the rate the learner can take, and scaffolds script support **per word**. Words move from **familiarity** (rapid repetition) to **fluency** (fresh AI-generated scenarios); knowledge is topic fluency, proven on unseen scenarios. Progress is two **separate** readouts — functional (topic mastery) and standardised (JLPT proficiency). The system **states facts, never cheers**; complexity stays behind glass. Production is typing, selecting, and speaking — never handwriting. Content is shared; progress is private.
+A web/PWA Japanese-learning app for English speakers, **outcome-based**: the learner declares a can-do they want, and the engine delivers it. The learner states intent in a natural-language **chat** surface; the system finds or builds the chapter, and the learner works down a guided **checklist** — the spine — popping in and out of intensive **episodes** (Introduce, Drill, Scenario, Voice capture). Everything — topics and structure — is a can-do **unit**, nested parent taxonomy → chapter → content, run by **one adaptive engine** across four learning patterns. The learner sets a one-time script **intention**; the engine reads ability from success and failure, starts simple, layers complexity at the rate the learner can take, and scaffolds script support **per word**. Words move from **familiarity** (rapid repetition) to **fluency** (fresh AI-generated scenarios); a chapter refines vertically as the same situation at rising naturalness. Leaving and returning are non-destructive — state lives in the profile. Progress is two **separate** readouts — functional (topic mastery) and standardised (JLPT proficiency). The system **states facts, never cheers**; complexity stays behind glass. Production is typing, selecting, and speaking — never handwriting. Content is shared; progress is private; the author seeds, the system organises.
 
 ---
 
@@ -292,5 +308,8 @@ These do not block the MVP build and can be settled when the relevant phase is r
 - **Pronunciation-scoring depth** — whether "compare-to-correct" speaking uses simple recognition-match or finer pronunciation/pitch-accent scoring. The MVP may begin with recognition-match.
 - **"Fail" event definition in the drill** — what registers as a failure (typed / tapped / spoken input), and the forgiving-match rules around it (§2.1, §12).
 - **Scenario reuse vs freshness** — scenarios are shared (§7.4), but fluency must be tested on scenarios fresh *to that learner*; the policy for drawing fresh vs reused scenarios per learner is to be tuned.
+- **Long-absence re-entry** — a heavily decayed chapter must re-enter as *refresh*, not *restart*; the re-entry sequencing is to be designed (§8.5).
+- **Fresh-chapter cold start** — a brand-new AI-authored chapter's first generation is the roughest version, and the first learner experiences it; the quality floor for first generation, and how fast emergent refinement (§6.6) improves it, are to be defined.
+- **Over-large chapter splitting** — a chapter whose checklist grows too long must auto-split into sub-chapters; the split trigger is to be defined (§6.6).
 
-*Resolved during design discussion: the three-stage word lifecycle (familiarise / lock-in / retain) replaced by familiarity → fluency; placement tests and learner levels/buckets removed in favour of the continuous profile and the start-simple ramp; the §4.1 staged romaji scaffold replaced by the per-word, per-direction scaffold; the two content categories unified into one unit type with four learning patterns; the adaptive engine, the learning scale, and the two separate readouts specified; bilateral testing required; the system-as-instrument principle adopted.*
+*Resolved during design discussion: the three-stage word lifecycle replaced by the chapter lifecycle (familiarity → fluency, with leaving / returning / expanding); placement tests and learner levels/buckets removed in favour of the continuous profile and the start-simple ramp; the staged romaji scaffold replaced by the per-word, per-direction scaffold; the two content categories unified into one unit type with four learning patterns; the parent → chapter → content hierarchy and emergent organisation adopted; the adaptive engine, the learning scale (three tiers), and the two separate readouts specified; the checklist + chat + episodes interface and the blend rule adopted; voice-message capture for speaking; bilateral testing required; the system-as-instrument principle.*
