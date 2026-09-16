@@ -2,6 +2,7 @@ import { ALL_KANA, UNITS_BY_ID } from "@/lib/kana/data"
 import { unitTargetKana } from "@/lib/kana/curriculum"
 import { ALL_PRACTICAL_ITEMS } from "@/lib/practical/data"
 import { itemNeedsSupport } from "@/lib/practical/dependency"
+import { balancedSample } from "@/lib/kana/selection"
 import { masteryScore, reps, selectionWeight } from "@/lib/store/mastery"
 import type { PracticalCategory } from "@/lib/practical/types"
 import type { ProgressState } from "@/lib/store/progress"
@@ -138,31 +139,26 @@ export function categoryStatus(category: ListenCategory, state: ProgressState): 
   }
 }
 
-/** Weighted sample WITH repetition, avoiding immediate repeats. */
-function weightedPicks(refs: AnswerRef[], stats: Stats, n: number): AnswerRef[] {
+/**
+ * Coverage-first weighted sample. A normal session shows the whole pool before
+ * repeating anything; "weak" practice leans into repetition so the sounds the
+ * learner keeps missing come back around more often.
+ */
+function pickAnswers(
+  refs: AnswerRef[],
+  stats: Stats,
+  n: number,
+  bias: "coverage" | "targeted",
+): AnswerRef[] {
   if (refs.length === 0) return []
-  const out: AnswerRef[] = []
-  let last: string | null = null
-  for (let i = 0; i < n; i++) {
-    const weights = refs.map((r) => {
-      const key = statKeyFor(r)
-      const w = selectionWeight(stats[key])
-      return key === last ? w * 0.15 : w
-    })
-    const total = weights.reduce((a, b) => a + b, 0)
-    let x = Math.random() * total
-    let idx = 0
-    for (let j = 0; j < refs.length; j++) {
-      x -= weights[j]
-      if (x <= 0) {
-        idx = j
-        break
-      }
-    }
-    out.push(refs[idx])
-    last = statKeyFor(refs[idx])
-  }
-  return out
+  const byKey = new Map<string, AnswerRef>()
+  for (const r of refs) byKey.set(statKeyFor(r), r)
+  const keys = balancedSample([...byKey.keys()], {
+    n,
+    bias,
+    weightOf: (key) => selectionWeight(stats[key]),
+  })
+  return keys.map((k) => byKey.get(k) as AnswerRef)
 }
 
 /**
@@ -179,7 +175,8 @@ export function buildAudioSession(
   const stats = state.stats
   const avg = avgListeningMastery(pool.answers.map(statKeyFor), stats)
   const choiceCount = avg < 0.35 ? 4 : avg < 0.7 ? 5 : 6
-  const picks = weightedPicks(pool.answers, stats, count)
+  const bias = category === "weak" ? "targeted" : "coverage"
+  const picks = pickAnswers(pool.answers, stats, count, bias)
   return picks.map((ref) =>
     buildQuestion(ref, pool.kanaPool, pool.practicalPool, choiceCount, state.confusions),
   )

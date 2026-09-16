@@ -2,6 +2,7 @@ import { ALL_KANA, UNITS_BY_ID } from "@/lib/kana/data"
 import { unitTargetKana } from "@/lib/kana/curriculum"
 import { ALL_PRACTICAL_ITEMS } from "@/lib/practical/data"
 import { itemNeedsSupport } from "@/lib/practical/dependency"
+import { balancedSample } from "@/lib/kana/selection"
 import { masteryScore, reps, selectionWeight } from "@/lib/store/mastery"
 import type { PracticalCategory } from "@/lib/practical/types"
 import type { ProgressState } from "@/lib/store/progress"
@@ -153,32 +154,27 @@ export function categoryStatus(category: SpeakCategory, state: ProgressState): C
   }
 }
 
-/** Weighted sample WITH repetition, softening immediate repeats. */
-function weightedPicks(refs: AnswerRef[], stats: Stats, n: number): AnswerRef[] {
+/**
+ * Coverage-first weighted sample. A normal session works through the whole
+ * pool before repeating; "weak" practice leans into repetition so the forms
+ * the learner keeps missing come back around more often.
+ */
+function pickAnswers(
+  refs: AnswerRef[],
+  stats: Stats,
+  n: number,
+  bias: "coverage" | "targeted",
+): AnswerRef[] {
   if (refs.length === 0) return []
   const keyOf = (r: AnswerRef) => (r.kind === "kana" ? speakKanaKey(r.id) : speakItemKey(r.id))
-  const out: AnswerRef[] = []
-  let last: string | null = null
-  for (let i = 0; i < n; i++) {
-    const weights = refs.map((r) => {
-      const key = keyOf(r)
-      const w = selectionWeight(stats[key])
-      return key === last ? w * 0.15 : w
-    })
-    const total = weights.reduce((a, b) => a + b, 0)
-    let x = Math.random() * total
-    let idx = 0
-    for (let j = 0; j < refs.length; j++) {
-      x -= weights[j]
-      if (x <= 0) {
-        idx = j
-        break
-      }
-    }
-    out.push(refs[idx])
-    last = keyOf(refs[idx])
-  }
-  return out
+  const byKey = new Map<string, AnswerRef>()
+  for (const r of refs) byKey.set(keyOf(r), r)
+  const keys = balancedSample([...byKey.keys()], {
+    n,
+    bias,
+    weightOf: (key) => selectionWeight(stats[key]),
+  })
+  return keys.map((k) => byKey.get(k) as AnswerRef)
 }
 
 /** Build a speaking session of `count` prompts for a category. */
@@ -189,6 +185,7 @@ export function buildSpeakSession(
 ): SpeakQuestion[] {
   const pool = categoryPool(category, state)
   if (pool.answers.length === 0) return []
-  const picks = weightedPicks(pool.answers, state.stats, count)
+  const bias = category === "weak" ? "targeted" : "coverage"
+  const picks = pickAnswers(pool.answers, state.stats, count, bias)
   return picks.map((ref) => buildSpeakQuestion(ref, pool.promptKind))
 }
