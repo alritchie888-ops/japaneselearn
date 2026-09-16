@@ -13,7 +13,7 @@ import { applyResult, emptyStat, type KanaStat } from "./mastery"
 import { PROFILES, loadProgress, saveProgress, type Profile } from "./profiles"
 import type { RomajiMode } from "@/lib/practical/types"
 
-const SCHEMA_VERSION = 2
+const SCHEMA_VERSION = 3
 
 export interface SpeedRecord {
   timeMs: number
@@ -26,6 +26,8 @@ export interface SpeedRecord {
 export interface Settings {
   /** How aggressively romaji is shown as a learning aid. */
   romaji: RomajiMode
+  /** Auto-play pronunciation when a pair is matched correctly. */
+  sound: boolean
 }
 
 export interface ProgressState {
@@ -36,13 +38,15 @@ export interface ProgressState {
   streak: { count: number; lastActive: string }
   /** key `${count}` -> best record */
   bestSpeed: Record<string, SpeedRecord>
+  /** Listening speed-round bests, keyed by length label (e.g. "20", "60s"). */
+  bestListen: Record<string, SpeedRecord>
   /** kanaId -> confusedWithId -> count */
   confusions: Record<string, Record<string, number>>
   lastUnitId: string | null
   settings: Settings
 }
 
-const DEFAULT_SETTINGS: Settings = { romaji: "fade" }
+const DEFAULT_SETTINGS: Settings = { romaji: "fade", sound: true }
 
 function initialState(): ProgressState {
   return {
@@ -52,6 +56,7 @@ function initialState(): ProgressState {
     sessionsCompleted: 0,
     streak: { count: 0, lastActive: "" },
     bestSpeed: {},
+    bestListen: {},
     confusions: {},
     lastUnitId: null,
     settings: { ...DEFAULT_SETTINGS },
@@ -93,8 +98,10 @@ interface ProgressContextValue {
   completeStage: (stageId: string) => void
   completeSession: () => void
   recordSpeed: (count: number | string, record: Omit<SpeedRecord, "at">) => boolean
+  recordListen: (key: string, record: Omit<SpeedRecord, "at">) => boolean
   setLastUnit: (unitId: string) => void
   setRomajiMode: (mode: RomajiMode) => void
+  setSound: (on: boolean) => void
   reset: () => void
 }
 
@@ -215,6 +222,23 @@ export function ProgressProvider({
     [],
   )
 
+  const recordListen = useCallback<ProgressContextValue["recordListen"]>(
+    (key, record) => {
+      const existing = stateRef.current.bestListen[key]
+      const isBest = !existing || record.timeMs < existing.timeMs
+      setState((prev) => {
+        const prevBest = prev.bestListen[key]
+        if (prevBest && record.timeMs >= prevBest.timeMs) return prev
+        return {
+          ...prev,
+          bestListen: { ...prev.bestListen, [key]: { ...record, at: Date.now() } },
+        }
+      })
+      return isBest
+    },
+    [],
+  )
+
   const setLastUnit = useCallback((unitId: string) => {
     setState((prev) => (prev.lastUnitId === unitId ? prev : { ...prev, lastUnitId: unitId }))
   }, [])
@@ -224,6 +248,14 @@ export function ProgressProvider({
       prev.settings.romaji === mode
         ? prev
         : { ...prev, settings: { ...prev.settings, romaji: mode } },
+    )
+  }, [])
+
+  const setSound = useCallback((on: boolean) => {
+    setState((prev) =>
+      prev.settings.sound === on
+        ? prev
+        : { ...prev, settings: { ...prev.settings, sound: on } },
     )
   }, [])
 
@@ -248,8 +280,10 @@ export function ProgressProvider({
       completeStage,
       completeSession,
       recordSpeed,
+      recordListen,
       setLastUnit,
       setRomajiMode,
+      setSound,
       reset,
     }),
     [
@@ -261,8 +295,10 @@ export function ProgressProvider({
       completeStage,
       completeSession,
       recordSpeed,
+      recordListen,
       setLastUnit,
       setRomajiMode,
+      setSound,
       reset,
     ],
   )

@@ -2,13 +2,14 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BookOpen, Shuffle, Zap, TrendingUp, Calculator } from "lucide-react"
+import { BookOpen, Shuffle, Zap, TrendingUp, Calculator, Ear } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { UserBar } from "./user-bar"
 
 const NAV = [
   { href: "/", label: "Learn", icon: BookOpen },
   { href: "/practical", label: "Practical", icon: Calculator },
+  { href: "/listen", label: "Listen", icon: Ear },
   { href: "/practice", label: "Practice", icon: Shuffle },
   { href: "/speed", label: "Speed", icon: Zap },
   { href: "/progress", label: "Progress", icon: TrendingUp },

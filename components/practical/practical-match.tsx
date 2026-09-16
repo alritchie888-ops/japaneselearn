@@ -37,7 +37,7 @@ export function PracticalMatch({ itemIds, direction, support, onFinish }: Practi
 
   const pairs = useMemo<MatchPair[]>(() => {
     tally.current = { correct: 0, wrong: 0 }
-    return itemIds.flatMap((id) => {
+    return itemIds.flatMap((id): MatchPair[] => {
       const item = getPracticalItem(id)
       if (!item) return []
       const mastery = itemMastery(id, state.stats)
@@ -58,6 +58,7 @@ export function PracticalMatch({ itemIds, direction, support, onFinish }: Practi
             promptSub: reading,
             star: hint.star,
             starSide: "prompt",
+            audioText: item.kana,
           },
         ]
       }
@@ -72,6 +73,7 @@ export function PracticalMatch({ itemIds, direction, support, onFinish }: Practi
           answerSub: reading,
           star: hint.star,
           starSide: "answer",
+          audioText: item.kana,
         },
       ]
     })
@@ -88,5 +90,12 @@ export function PracticalMatch({ itemIds, direction, support, onFinish }: Practi
 
   const handleComplete = useCallback(() => onFinish({ ...tally.current }), [onFinish])
 
-  return <MatchBoard pairs={pairs} onResult={handleResult} onComplete={handleComplete} />
+  return (
+    <MatchBoard
+      pairs={pairs}
+      onResult={handleResult}
+      onComplete={handleComplete}
+      sound={state.settings.sound}
+    />
+  )
 }

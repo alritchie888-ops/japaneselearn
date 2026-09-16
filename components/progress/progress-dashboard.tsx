@@ -1,16 +1,21 @@
 "use client"
 
 import { useMemo } from "react"
-import { Flame, Layers, RotateCcw, Zap } from "lucide-react"
-import { UNITS, getKana, unitAllKana } from "@/lib/kana/data"
+import { Ear, Flame, Layers, RotateCcw, Zap } from "lucide-react"
+import { UNITS, ALL_KANA, getKana, unitAllKana } from "@/lib/kana/data"
 import {
   isKanaMastered,
   masteryLevel,
+  masteryScore,
   reps,
   recentAccuracy,
 } from "@/lib/store/mastery"
+import { ALL_PRACTICAL_ITEMS } from "@/lib/practical/data"
+import { itemMastery } from "@/lib/practical/mastery"
+import { audioItemKey, audioKanaKey } from "@/lib/audio/mastery"
 import { useProgress } from "@/lib/store/progress"
 import type { Script } from "@/lib/kana/types"
+import type { PracticalCategory } from "@/lib/practical/types"
 import { ScreenHeader } from "@/components/screen-header"
 import { cn } from "@/lib/utils"
 
@@ -54,6 +59,41 @@ export function ProgressDashboard() {
         .sort((a, b) => a.count - b.count),
     [state.bestSpeed],
   )
+
+  // Listening is tracked separately from reading, so show them side by side per
+  // group — only for groups the learner has actually started.
+  const listenGroups = useMemo(() => {
+    const groups: { title: string; visual: number; listening: number }[] = []
+    const avg = (ns: number[]) => (ns.length ? ns.reduce((a, b) => a + b, 0) / ns.length : 0)
+
+    for (const s of SCRIPTS) {
+      const ids = ALL_KANA.filter((k) => k.script === s.key && reps(stats[k.id]) > 0).map((k) => k.id)
+      if (ids.length === 0) continue
+      groups.push({
+        title: s.title,
+        visual: avg(ids.map((id) => masteryScore(stats[id]))),
+        listening: avg(ids.map((id) => masteryScore(stats[audioKanaKey(id)]))),
+      })
+    }
+
+    const cats: { key: PracticalCategory; title: string }[] = [
+      { key: "numbers", title: "Numbers" },
+      { key: "time", title: "Time" },
+      { key: "calendar", title: "Calendar" },
+      { key: "counters", title: "Counters" },
+    ]
+    for (const c of cats) {
+      const items = ALL_PRACTICAL_ITEMS.filter((it) => it.category === c.key)
+      const seen = items.filter((it) => itemMastery(it.id, stats) > 0)
+      if (seen.length === 0) continue
+      groups.push({
+        title: c.title,
+        visual: avg(seen.map((it) => itemMastery(it.id, stats))),
+        listening: avg(seen.map((it) => masteryScore(stats[audioItemKey(it.id)]))),
+      })
+    }
+    return groups
+  }, [stats])
 
   if (!hydrated) {
     return (
@@ -109,6 +149,32 @@ export function ProgressDashboard() {
                 </li>
               ))}
             </ul>
+          </section>
+        )}
+
+        {/* Reading vs listening */}
+        {listenGroups.length > 0 && (
+          <section>
+            <div className="mb-2 flex items-center gap-2 px-1">
+              <Ear className="size-4 text-primary" aria-hidden="true" />
+              <h2 className="text-sm font-semibold text-foreground">Reading vs listening</h2>
+            </div>
+            <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
+              {listenGroups.map((g) => (
+                <div key={g.title}>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <span className="text-sm font-medium text-foreground">{g.title}</span>
+                    <span className="text-[11px] tabular-nums text-muted-foreground">
+                      read {Math.round(g.visual * 100)}% · heard {Math.round(g.listening * 100)}%
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <SkillBar value={g.visual} tone="muted" />
+                    <SkillBar value={g.listening} tone="primary" />
+                  </div>
+                </div>
+              ))}
+            </div>
           </section>
         )}
 
@@ -208,6 +274,17 @@ function StatTile({
       </span>
       <p className="mt-2 text-xl font-bold tabular-nums text-foreground">{value}</p>
       <p className="text-[11px] text-muted-foreground">{label}</p>
+    </div>
+  )
+}
+
+function SkillBar({ value, tone }: { value: number; tone: "primary" | "muted" }) {
+  return (
+    <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+      <div
+        className={cn("h-full rounded-full transition-all", tone === "primary" ? "bg-primary" : "bg-muted-foreground/50")}
+        style={{ width: `${Math.round(value * 100)}%` }}
+      />
     </div>
   )
 }

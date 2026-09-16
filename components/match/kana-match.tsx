@@ -21,7 +21,7 @@ interface KanaMatchProps {
  * reverse = kana → sound. Records each attempt into the mastery store.
  */
 export function KanaMatch({ kanaIds, direction, onFinish }: KanaMatchProps) {
-  const { recordAnswer } = useProgress()
+  const { state, recordAnswer } = useProgress()
   const tally = useRef<RoundResult>({ correct: 0, wrong: 0 })
 
   const pairs = useMemo<MatchPair[]>(() => {
@@ -29,9 +29,9 @@ export function KanaMatch({ kanaIds, direction, onFinish }: KanaMatchProps) {
     return kanaIds.map((id) => {
       const k = getKana(id)
       if (direction === "forward") {
-        return { id, prompt: k.romaji, answer: k.char, promptJp: false, answerJp: true }
+        return { id, prompt: k.romaji, answer: k.char, promptJp: false, answerJp: true, audioText: k.char }
       }
-      return { id, prompt: k.char, answer: k.romaji, promptJp: true, answerJp: false }
+      return { id, prompt: k.char, answer: k.romaji, promptJp: true, answerJp: false, audioText: k.char }
     })
   }, [kanaIds, direction])
 
@@ -48,5 +48,12 @@ export function KanaMatch({ kanaIds, direction, onFinish }: KanaMatchProps) {
     onFinish({ ...tally.current })
   }, [onFinish])
 
-  return <MatchBoard pairs={pairs} onResult={handleResult} onComplete={handleComplete} />
+  return (
+    <MatchBoard
+      pairs={pairs}
+      onResult={handleResult}
+      onComplete={handleComplete}
+      sound={state.settings.sound}
+    />
+  )
 }
