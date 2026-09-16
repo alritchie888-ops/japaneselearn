@@ -166,7 +166,7 @@ export function MatchBoard({ pairs, onResult, onComplete }: MatchBoardProps) {
                   disabled={isMatched}
                   onPointerDown={(e) => startDrag(e, p.id)}
                   className={cn(
-                    "relative flex w-full touch-none flex-col items-center justify-center gap-1 rounded-2xl border px-3 py-5 text-2xl font-medium transition-all",
+                    "relative flex min-h-[5.5rem] w-full touch-none flex-col items-center justify-center gap-1 rounded-2xl border px-3 py-4 font-medium transition-all",
                     "border-border bg-card shadow-sm active:scale-[0.98]",
                     !isMatched && "cursor-grab",
                     isMatched &&
@@ -181,7 +181,7 @@ export function MatchBoard({ pairs, onResult, onComplete }: MatchBoardProps) {
                       <GoldStar level={p.star ?? 0} />
                     </span>
                   )}
-                  <KanaGlyph text={p.prompt} jp={p.promptJp} className={p.promptJp ? "text-3xl" : ""} />
+                  <KanaGlyph text={p.prompt} jp={p.promptJp} className={p.promptJp ? "text-4xl" : "text-2xl"} />
                   {p.promptSub && (
                     <span className="text-xs font-normal text-muted-foreground">{p.promptSub}</span>
                   )}
@@ -207,7 +207,7 @@ export function MatchBoard({ pairs, onResult, onComplete }: MatchBoardProps) {
                   }}
                   tabIndex={-1}
                   className={cn(
-                    "relative flex w-full flex-col items-center justify-center gap-1 rounded-2xl border px-3 py-5 text-3xl transition-all",
+                    "relative flex min-h-[5.5rem] w-full flex-col items-center justify-center gap-1 rounded-2xl border px-3 py-4 transition-all",
                     "border-dashed border-border bg-secondary/40",
                     isHover && !isCorrectHover && "border-solid border-muted-foreground/60",
                     isCorrectHover && "scale-[1.03] border-solid border-primary bg-accent",
@@ -256,7 +256,7 @@ export function MatchBoard({ pairs, onResult, onComplete }: MatchBoardProps) {
             const p = pairs.find((x) => x.id === dragId)
             if (!p) return null
             return (
-              <KanaGlyph text={p.prompt} jp={p.promptJp} className={p.promptJp ? "text-3xl" : ""} />
+              <KanaGlyph text={p.prompt} jp={p.promptJp} className={p.promptJp ? "text-4xl" : "text-2xl"} />
             )
           })()}
         </div>
