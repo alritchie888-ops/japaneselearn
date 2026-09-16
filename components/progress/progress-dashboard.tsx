@@ -13,6 +13,7 @@ import {
 import { ALL_PRACTICAL_ITEMS } from "@/lib/practical/data"
 import { itemMastery } from "@/lib/practical/mastery"
 import { audioItemKey, audioKanaKey } from "@/lib/audio/mastery"
+import { speakItemKey, speakKanaKey } from "@/lib/speak/mastery"
 import { useProgress } from "@/lib/store/progress"
 import type { Script } from "@/lib/kana/types"
 import type { PracticalCategory } from "@/lib/practical/types"
@@ -60,10 +61,10 @@ export function ProgressDashboard() {
     [state.bestSpeed],
   )
 
-  // Listening is tracked separately from reading, so show them side by side per
-  // group — only for groups the learner has actually started.
-  const listenGroups = useMemo(() => {
-    const groups: { title: string; visual: number; listening: number }[] = []
+  // Reading, listening, and speaking are tracked as separate skills, so show
+  // them side by side per group — only for groups the learner has started.
+  const skillGroups = useMemo(() => {
+    const groups: { title: string; visual: number; listening: number; speaking: number }[] = []
     const avg = (ns: number[]) => (ns.length ? ns.reduce((a, b) => a + b, 0) / ns.length : 0)
 
     for (const s of SCRIPTS) {
@@ -73,6 +74,7 @@ export function ProgressDashboard() {
         title: s.title,
         visual: avg(ids.map((id) => masteryScore(stats[id]))),
         listening: avg(ids.map((id) => masteryScore(stats[audioKanaKey(id)]))),
+        speaking: avg(ids.map((id) => masteryScore(stats[speakKanaKey(id)]))),
       })
     }
 
@@ -90,6 +92,7 @@ export function ProgressDashboard() {
         title: c.title,
         visual: avg(seen.map((it) => itemMastery(it.id, stats))),
         listening: avg(seen.map((it) => masteryScore(stats[audioItemKey(it.id)]))),
+        speaking: avg(seen.map((it) => masteryScore(stats[speakItemKey(it.id)]))),
       })
     }
     return groups
@@ -152,25 +155,34 @@ export function ProgressDashboard() {
           </section>
         )}
 
-        {/* Reading vs listening */}
-        {listenGroups.length > 0 && (
+        {/* Read · hear · speak */}
+        {skillGroups.length > 0 && (
           <section>
-            <div className="mb-2 flex items-center gap-2 px-1">
-              <Ear className="size-4 text-primary" aria-hidden="true" />
-              <h2 className="text-sm font-semibold text-foreground">Reading vs listening</h2>
+            <div className="mb-2 flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <Ear className="size-4 text-primary" aria-hidden="true" />
+                <h2 className="text-sm font-semibold text-foreground">Read · hear · speak</h2>
+              </div>
+              <div className="flex items-center gap-2.5" aria-hidden="true">
+                <SkillKey tone="muted" label="read" />
+                <SkillKey tone="primary" label="hear" />
+                <SkillKey tone="success" label="speak" />
+              </div>
             </div>
             <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
-              {listenGroups.map((g) => (
+              {skillGroups.map((g) => (
                 <div key={g.title}>
                   <div className="mb-1.5 flex items-center justify-between">
                     <span className="text-sm font-medium text-foreground">{g.title}</span>
                     <span className="text-[11px] tabular-nums text-muted-foreground">
-                      read {Math.round(g.visual * 100)}% · heard {Math.round(g.listening * 100)}%
+                      {Math.round(g.visual * 100)} · {Math.round(g.listening * 100)} ·{" "}
+                      {Math.round(g.speaking * 100)}%
                     </span>
                   </div>
                   <div className="space-y-1">
                     <SkillBar value={g.visual} tone="muted" />
                     <SkillBar value={g.listening} tone="primary" />
+                    <SkillBar value={g.speaking} tone="success" />
                   </div>
                 </div>
               ))}
@@ -278,14 +290,31 @@ function StatTile({
   )
 }
 
-function SkillBar({ value, tone }: { value: number; tone: "primary" | "muted" }) {
+type SkillTone = "primary" | "muted" | "success"
+
+const TONE_CLASS: Record<SkillTone, string> = {
+  primary: "bg-primary",
+  muted: "bg-muted-foreground/50",
+  success: "bg-success",
+}
+
+function SkillBar({ value, tone }: { value: number; tone: SkillTone }) {
   return (
     <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
       <div
-        className={cn("h-full rounded-full transition-all", tone === "primary" ? "bg-primary" : "bg-muted-foreground/50")}
+        className={cn("h-full rounded-full transition-all", TONE_CLASS[tone])}
         style={{ width: `${Math.round(value * 100)}%` }}
       />
     </div>
+  )
+}
+
+function SkillKey({ tone, label }: { tone: SkillTone; label: string }) {
+  return (
+    <span className="flex items-center gap-1">
+      <span className={cn("size-2 rounded-full", TONE_CLASS[tone])} />
+      <span className="text-[10px] text-muted-foreground">{label}</span>
+    </span>
   )
 }
 

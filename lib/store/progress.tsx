@@ -13,7 +13,7 @@ import { applyResult, emptyStat, type KanaStat } from "./mastery"
 import { PROFILES, loadProgress, saveProgress, type Profile } from "./profiles"
 import type { RomajiMode } from "@/lib/practical/types"
 
-const SCHEMA_VERSION = 3
+const SCHEMA_VERSION = 4
 
 export interface SpeedRecord {
   timeMs: number
@@ -40,6 +40,10 @@ export interface ProgressState {
   bestSpeed: Record<string, SpeedRecord>
   /** Listening speed-round bests, keyed by length label (e.g. "20", "60s"). */
   bestListen: Record<string, SpeedRecord>
+  /** Speaking speed-round bests, keyed by category (or `${category}:60s`). */
+  bestSpeak: Record<string, SpeedRecord>
+  /** Rolling pronunciation-confidence average per speaking stat key. */
+  pron: Record<string, number>
   /** kanaId -> confusedWithId -> count */
   confusions: Record<string, Record<string, number>>
   lastUnitId: string | null
@@ -57,6 +61,8 @@ function initialState(): ProgressState {
     streak: { count: 0, lastActive: "" },
     bestSpeed: {},
     bestListen: {},
+    bestSpeak: {},
+    pron: {},
     confusions: {},
     lastUnitId: null,
     settings: { ...DEFAULT_SETTINGS },
@@ -99,6 +105,8 @@ interface ProgressContextValue {
   completeSession: () => void
   recordSpeed: (count: number | string, record: Omit<SpeedRecord, "at">) => boolean
   recordListen: (key: string, record: Omit<SpeedRecord, "at">) => boolean
+  recordSpeak: (key: string, record: Omit<SpeedRecord, "at">) => boolean
+  recordPron: (statKey: string, confidence: number) => void
   setLastUnit: (unitId: string) => void
   setRomajiMode: (mode: RomajiMode) => void
   setSound: (on: boolean) => void
@@ -239,6 +247,33 @@ export function ProgressProvider({
     [],
   )
 
+  const recordSpeak = useCallback<ProgressContextValue["recordSpeak"]>(
+    (key, record) => {
+      const existing = stateRef.current.bestSpeak[key]
+      const isBest = !existing || record.timeMs < existing.timeMs
+      setState((prev) => {
+        const prevBest = prev.bestSpeak[key]
+        if (prevBest && record.timeMs >= prevBest.timeMs) return prev
+        return {
+          ...prev,
+          bestSpeak: { ...prev.bestSpeak, [key]: { ...record, at: Date.now() } },
+        }
+      })
+      return isBest
+    },
+    [],
+  )
+
+  const recordPron = useCallback<ProgressContextValue["recordPron"]>((statKey, confidence) => {
+    const clamped = Math.max(0, Math.min(1, confidence))
+    setState((prev) => {
+      const prior = prev.pron[statKey]
+      // Exponential moving average so recent attempts weigh most.
+      const next = prior == null ? clamped : prior * 0.6 + clamped * 0.4
+      return { ...prev, pron: { ...prev.pron, [statKey]: next } }
+    })
+  }, [])
+
   const setLastUnit = useCallback((unitId: string) => {
     setState((prev) => (prev.lastUnitId === unitId ? prev : { ...prev, lastUnitId: unitId }))
   }, [])
@@ -281,6 +316,8 @@ export function ProgressProvider({
       completeSession,
       recordSpeed,
       recordListen,
+      recordSpeak,
+      recordPron,
       setLastUnit,
       setRomajiMode,
       setSound,
@@ -296,6 +333,8 @@ export function ProgressProvider({
       completeSession,
       recordSpeed,
       recordListen,
+      recordSpeak,
+      recordPron,
       setLastUnit,
       setRomajiMode,
       setSound,
