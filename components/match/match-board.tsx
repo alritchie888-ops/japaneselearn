@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils"
 import { shuffle } from "@/lib/kana/selection"
 import { KanaGlyph } from "@/components/kana-glyph"
 import { GoldStar } from "@/components/practical/gold-star"
+import { SpeakButton } from "@/components/speak-button"
+import { speak } from "@/lib/audio/speak"
 
 export interface MatchPair {
   /** Identity used for matching. */
@@ -22,12 +24,16 @@ export interface MatchPair {
   star?: number
   /** Which side the star/reading attaches to. Defaults to the Japanese side. */
   starSide?: "prompt" | "answer"
+  /** Japanese text to pronounce; adds a speaker on the Japanese side. */
+  audioText?: string
 }
 
 interface MatchBoardProps {
   pairs: MatchPair[]
   onResult: (id: string, correct: boolean, confusedWith?: string) => void
   onComplete: () => void
+  /** Auto-play the pronunciation when a pair is matched correctly. */
+  sound?: boolean
 }
 
 interface DragSession {
@@ -38,7 +44,7 @@ interface DragSession {
   height: number
 }
 
-export function MatchBoard({ pairs, onResult, onComplete }: MatchBoardProps) {
+export function MatchBoard({ pairs, onResult, onComplete, sound = false }: MatchBoardProps) {
   const [matched, setMatched] = useState<Set<string>>(new Set())
   const [dragId, setDragId] = useState<string | null>(null)
   const [dragPos, setDragPos] = useState({ x: 0, y: 0 })
@@ -89,6 +95,10 @@ export function MatchBoard({ pairs, onResult, onComplete }: MatchBoardProps) {
           return next
         })
         onResult(session.id, true)
+        if (sound) {
+          const p = pairs.find((x) => x.id === session.id)
+          if (p?.audioText) void speak(p.audioText)
+        }
       } else if (over) {
         onResult(session.id, false, over)
         setWrongId(session.id)
@@ -181,6 +191,9 @@ export function MatchBoard({ pairs, onResult, onComplete }: MatchBoardProps) {
                       <GoldStar level={p.star ?? 0} />
                     </span>
                   )}
+                  {p.audioText && p.promptJp && (
+                    <SpeakButton text={p.audioText} className="absolute bottom-1.5 right-1.5" />
+                  )}
                   <KanaGlyph text={p.prompt} jp={p.promptJp} className={p.promptJp ? "text-4xl" : "text-2xl"} />
                   {p.promptSub && (
                     <span className="text-xs font-normal text-muted-foreground">{p.promptSub}</span>
@@ -227,6 +240,9 @@ export function MatchBoard({ pairs, onResult, onComplete }: MatchBoardProps) {
                   />
                   {p.answerSub && (
                     <span className="text-xs font-normal text-muted-foreground">{p.answerSub}</span>
+                  )}
+                  {p.audioText && p.answerJp && (
+                    <SpeakButton text={p.audioText} className="absolute bottom-1.5 right-1.5" />
                   )}
                   {isMatched && (
                     <span className="absolute right-2 top-2 flex size-5 items-center justify-center rounded-full bg-success text-success-foreground">

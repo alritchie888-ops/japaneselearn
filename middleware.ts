@@ -7,7 +7,7 @@ import { SESSION_COOKIE } from "@/lib/auth/constants"
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  if (pathname.startsWith("/api/auth")) {
+  if (pathname.startsWith("/api/auth") || pathname.startsWith("/api/tts")) {
     return NextResponse.next()
   }
 

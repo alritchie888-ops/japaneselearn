@@ -26,6 +26,8 @@ export interface SpeedRecord {
 export interface Settings {
   /** How aggressively romaji is shown as a learning aid. */
   romaji: RomajiMode
+  /** Auto-play pronunciation when a pair is matched correctly. */
+  sound: boolean
 }
 
 export interface ProgressState {
@@ -42,7 +44,7 @@ export interface ProgressState {
   settings: Settings
 }
 
-const DEFAULT_SETTINGS: Settings = { romaji: "fade" }
+const DEFAULT_SETTINGS: Settings = { romaji: "fade", sound: true }
 
 function initialState(): ProgressState {
   return {
@@ -95,6 +97,7 @@ interface ProgressContextValue {
   recordSpeed: (count: number | string, record: Omit<SpeedRecord, "at">) => boolean
   setLastUnit: (unitId: string) => void
   setRomajiMode: (mode: RomajiMode) => void
+  setSound: (on: boolean) => void
   reset: () => void
 }
 
@@ -227,6 +230,14 @@ export function ProgressProvider({
     )
   }, [])
 
+  const setSound = useCallback((on: boolean) => {
+    setState((prev) =>
+      prev.settings.sound === on
+        ? prev
+        : { ...prev, settings: { ...prev.settings, sound: on } },
+    )
+  }, [])
+
   const reset = useCallback(
     () =>
       setState((prev) => ({ ...initialState(), settings: prev.settings })),
@@ -250,6 +261,7 @@ export function ProgressProvider({
       recordSpeed,
       setLastUnit,
       setRomajiMode,
+      setSound,
       reset,
     }),
     [
@@ -263,6 +275,7 @@ export function ProgressProvider({
       recordSpeed,
       setLastUnit,
       setRomajiMode,
+      setSound,
       reset,
     ],
   )
